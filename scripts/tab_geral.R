@@ -7,9 +7,7 @@ library(dplyr)
 library(here)
 library(readxl)
 library(writexl)
-# library(tidyr)
-# library(geobr)
-
+library(read.dbc)
 
 #data----
 st_read("/Users/user/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap3/data/hexGrid_landcover_caat_2006.shp") -> hexGrid_landcover_2006
@@ -25,6 +23,8 @@ read_xlsx("/Users/user/Library/CloudStorage/OneDrive-Personal/Documentos/Doutora
 read_xlsx("/Users/user/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap3/data/pibs_brasil.xlsx", sheet = 4) -> pibServPriv_br
 read_xlsx("/Users/user/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap3/data/pibs_brasil.xlsx", sheet = 5) -> pibServPub_br
 read_xlsx("/Users/user/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap1/forest-develop/dbcap1_clean.xlsx") -> tabela_geral
+read.dbc("/Users/user/Library/CloudStorage/OneDrive-TheUniversityofManchester/SFT/Data/Brazil/raw/statistical/mortalidade_infantil_2022.dbc") -> mortalidade_infantil_22
+read.csv("/Users/user/Library/CloudStorage/OneDrive-TheUniversityofManchester/SFT/Data/Brazil/raw/statistical/agua_esgoto_municipio_2017-2022.csv", sep = ";", dec = ",") -> agua_esgoto
 
 #organization----
 
