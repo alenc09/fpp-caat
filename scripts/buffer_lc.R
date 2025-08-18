@@ -18,6 +18,8 @@ raster("/Users/user/Library/CloudStorage/OneDrive-TheUniversityofManchester/SFT/
 raster("/Users/user/Library/CloudStorage/OneDrive-TheUniversityofManchester/SFT/Data/Brazil/clean/gis/mapbiomas_caatinga_2022_5880.tif") -> caatinga_lc_2022
 raster("/Users/user/Library/CloudStorage/OneDrive-TheUniversityofManchester/SFT/Data/Brazil/clean/gis/mapbiomas_caatinga_2023_5880.tif") -> caatinga_lc_2023
 
+read_sf("/Users/user/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap3/data/buffers_municipio_5880.shp") -> buffers_mun
+
 #organization----
 raster_list <- list(
   caatinga_lc_2010,
@@ -54,5 +56,12 @@ results_wide <- results_df %>%
     values_from = pct34,
     names_prefix = "perc_forest_"
   )
+
+results_wide %>% 
+  left_join(y = buffers_mun) %>% 
+  st_drop_geometry() %>% 
+  mutate(code_mun = as.factor(CD_MUN), .keep = "unused") %>% 
+  dplyr::select(-geometry) %>% 
+  glimpse -> results_wide
 
 write.csv(x = results_wide, file = "~/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap3/data/buffer_forest.csv")

@@ -16,13 +16,16 @@ read_sf("/Users/user/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado
 read_sf("/Users/user/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap3/data/popPoint_caat_rural_2022_5880.shp") -> caatinga_pop_2022
 read_sf("/Users/user/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap3/data/popPoint_caat_rural_2023_5880.shp") -> caatinga_pop_2023
 
+read_sf("/Users/user/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap3/data/buffers_municipio_5880.shp") -> buffers_mun
+
+##organization----
 pop_list <- list(caatinga_pop_2010, caatinga_pop_2011, caatinga_pop_2017,
                  caatinga_pop_2018, caatinga_pop_2022, caatinga_pop_2023)
 
 names(pop_list) <- c("2010","2011","2017","2018","2022","2023")
 
-years <- names(pop_list)  # ex: "2010","2011",...
-pop_col <- "pop"          # ajuste se sua coluna tem outro nome
+years <- names(pop_list)  
+pop_col <- "pop"          
 
 res_list <- vector("list", length(pop_list))
 
@@ -49,4 +52,10 @@ pop_results_df <- bind_rows(res_list)
 pop_results_wide <- pop_results_df %>%
   pivot_wider(names_from = year, values_from = pop_sum, names_prefix = "pop_")
 
-write.csv(x = pop_results_wide, file = "~/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap3/data/buffer_population.csv")
+pop_results_wide %>% 
+  left_join(y = buffers_mun) %>% 
+  mutate(code_mun = as.factor(CD_MUN), .keep = "unused") %>% 
+  dplyr::select(-geometry) %>% 
+  glimpse -> pop_results_wide
+
+# write.csv(x = pop_results_wide, file = "~/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap3/data/buffer_population.csv")
