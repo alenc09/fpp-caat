@@ -14,8 +14,8 @@ library(spatialreg)
 
 #Data----
 read.csv(file = here("data/tabela_geral.csv")) -> tab_geral
-read_xlsx(path = "/home/alenc/Documents/Doutorado/tese/cap1/forest-develop/data/dbcap1_rma.xlsx") -> dbcap1_rma
-read_xlsx(path = "/home/alenc/Documents/Doutorado/tese/cap0/data/atlas_dadosbrutos_00_10.xlsx", 
+read_xlsx(path = "/Users/user/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap1/dbcap1_rma.xlsx") -> dbcap1_rma
+read_xlsx(path = "/Users/user/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap3/data/atlas_dadosbrutos_00_10.xlsx", 
           sheet = 2) -> dados_atlas
 
 
@@ -74,7 +74,9 @@ tab_geral %>%
   #filter(!is.na(.$code_muni)
    #      ) %>%
   na.omit() %>% 
-  glimpse -> tab_mun 
+  glimpse -> tab_mun_old
+
+# writexl::write_xlsx(x = tab_mun_old, path = "data/tab_mun_old.xlsx")
 
 ### Table for absolute change in development indicators----
 tab_mun %>%

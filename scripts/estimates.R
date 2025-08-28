@@ -1,8 +1,9 @@
 # Tue May 17 09:44:32 2022 ------------------------------
-#Script para calcular estimativas (area, pessoas, floresta) em paisagens com mais de 20% de cobertura florestal
+#Script para calcular estimativas (area, pessoas, floresta) 
 
 #library----
 library(here)
+library(sf)
 library(dplyr)
 library(ggplot2)
 library(tidyr)
@@ -12,27 +13,47 @@ library(ggpubr)
 
 #data----
 read.csv(file = here("data/tabela_geral.csv"))-> tab_geral
+read_sf("/Users/user/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap3/data/pop_sc_caat_2022_5880.gpkg") -> pop_sc_2022
 
 #cáculos----
+##população da Caatinga----
+pop_sc_2022 %>% 
+  reframe(pop_total_caat = sum(V0001),
+          pop_urbana_caat = sum(V0001[situacao.x == "Urbana"], na.rm = T),
+          pop_rural_caat = sum(V0001[situacao.x == "Rural"], na.rm = T)) %>% 
+  glimpse -> pop_caat_2022
+
+##pobreza na Caatinga----
+sc_rendaResp_mean_2022 %>% 
+  mutate(in_caatinga = if_else(code_tract %in% pop_sc_2022$code_tract, "Caatinga", "Fora")) %>% 
+  glimpse -> renda_flag
+
+renda_flag %>% 
+  group_by(in_caatinga) %>% 
+  summarise(renda_media = mean(rendaResp_mean_2022, na.rm = TRUE)) %>% 
+  glimpse
+
 ##n de paisagens
-tab_geral %>% 
-  #rename(buff_id = X) %>% 
-  filter(pland_nvc_06 >= 20) %>% 
-  summarise(n_paisagens = n_distinct(buff_id)) %>% 
+tabela_buffer_nova %>% 
+  filter(perc_forest_2022 >= 20) %>%
+  summarise(n_paisagens = n_distinct(id)) %>%
   glimpse
 
 ##number of FPP----
-tab_geral %>% 
-  filter(pland_nvc_06 >= 20) %>% 
-  summarise(fpp_06 = sum(pop_rural_WP_06),
-            fpp_17 = sum(pop_rural_WP_17),
-            abs_change = fpp_17 - fpp_06,
-            mean_fpp_change = mean(pop_rural_WP_17 - pop_rural_WP_06),
-            sd_fpp_change = sd(pop_rural_WP_17 - pop_rural_WP_06),
-            n = n(),
-            mean_nvc = mean(pland_nvc_17),
-            sd_nvc = sd(pland_nvc_17),
-            ) %>% 
+tabela_buffer_nova %>% 
+  filter(perc_forest_2022 >= 20) %>% 
+  summarise(fpp_10 = sum(fpp_2010, na.rm = T),
+            fpp_22 = sum(fpp_2022, na.rm = T),
+            abs_change = fpp_22 - fpp_10,
+            mean_fpp_10 = mean(fpp_2010, na.rm = T),
+            sd_fpp_10 = sd(fpp_2010, na.rm = T),
+            mean_perc_forest_10 = mean(perc_forest_2010),
+            sd_perc_fores_10 = sd(perc_forest_2010),
+            mean_fpp_22 = mean(fpp_2022),
+            sd_fpp_22 = sd(fpp_2022),
+            mean_perc_forest_22 = mean(perc_forest_2022),
+            sd_perc_forest_22 = sd(perc_forest_2022)
+            ) %>%
   glimpse -> fpp_buffs
 
 ((fpp_buffs$fpp_17*92.81447)/49.41354) - ((fpp_buffs$fpp_06*92.81447)/49.41354)
