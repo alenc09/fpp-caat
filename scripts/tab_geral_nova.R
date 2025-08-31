@@ -460,9 +460,14 @@ tabela_buffer%>%
   left_join(y = dados_mun_awa_2010, by = "code_mun") %>% 
   left_join(y = dados_mun_awa_2017, by = c("code_mun", "geometry")) %>% 
   left_join(y = caat_mun_dados_2022, by = c("code_mun", "geometry")) %>% 
+  mutate(code_state = str_sub(as.character(code_mun), 1,2),
+         code_state = as.factor(code_state)) %>% 
+  select(-geometry) %>% 
+  rename(geometry = geom) %>% 
   glimpse -> tabela_buffer_nova
 
 # writexl::write_xlsx(x = tabela_buffer_nova, path = "data/tabela_buffer_nova.xlsx")
+st_write(obj = tabela_buffer_nova, dsn = "/Users/user/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap3/data/tabela_buffer_nova.gpkg", append=F)
 
 ##Escala de município----
 # 1) Deixa no formato long
