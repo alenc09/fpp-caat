@@ -50,4 +50,6 @@ write.csv(x = pop_sc_br_2022, file = "/Users/user/Library/CloudStorage/OneDrive-
 
 write_sf(obj = sc_caat_rural_2022, dsn = "/Users/user/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap3/data/sc_caat_rural_2022_5880.gpkg")
 
-censobr::read_tracts(dataset = )
+geobr::read_state(code_state = "all", year = 2020, simplified = F) -> br_states
+
+write_sf(obj = br_states, dsn = "/Users/user/Library/CloudStorage/OneDrive-TheUniversityofManchester/SFT/Data/Brazil/raw/gis/br_states.gpkg")
