@@ -177,13 +177,18 @@ ggplot(results_bioma_diff, aes(x = threshold, y = fpp_change)) +
   theme_classic(base_size = 20) -> fpp_thresholds_change
 
 ###Figure 1---
-fpp_thresholds + fpp_thresholds_change + plot_layout(ncol = 2) +
-  plot_annotation(tag_levels = "a", theme = theme(plot.tag = element_text(face = "bold", size = 14)))
-  ggsave(filename = "/Users/user/Library/CloudStorage/OneDrive-TheUniversityofManchester/outros_trampos/Manuscritos/FPP_caat/manuscript/PNAS/PNAS_lucas_resubmissao/Fig_1.jpg",
-         dpi = 300,
-         width = 16,
-         height = 9)
+# fpp_thresholds + fpp_thresholds_change + plot_layout(ncol = 2) +
+#   plot_annotation(tag_levels = "a", theme = theme(plot.tag = element_text(face = "bold", size = 14)))
+#   ggsave(filename = "/Users/user/Library/CloudStorage/OneDrive-TheUniversityofManchester/outros_trampos/Manuscritos/FPP_caat/manuscript/PNAS/PNAS_lucas_resubmissao/Fig_1.jpg",
+#          dpi = 300,
+#          width = 16,
+#          height = 9)
 
+#rate of change per threshold----
+results_bioma_diff %>% 
+  mutate(taxa_anual = (`2022`/`2010`)^(1/12) - 1,
+         taxa_anual_perc = taxa_anual * 100) %>% 
+  glimpse -> results_bioma_diff
 
 ##change in forest and people by category of change----
 tab_geral %>% 
@@ -200,12 +205,7 @@ tab_geral %>%
          vari_perc_pop_rural > 0) %>% 
   glimpse
 
-##changes per state----
-tab_geral %>% 
-  mutate(pland_nvc_17 = pland_nvc_06 + vari_perc_nvc,
-         buff_id = as.factor(buff_id)) %>%
-  select(buff_id, code_uf, pland_nvc_17, pop_rural_WP_17) %>% 
-  glimpse -> tab_fpp_state
+
 
 ##Municipalities ----
 ###Cumulative from 10 to 100----
