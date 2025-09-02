@@ -110,7 +110,7 @@ ggplot(estimates_fpp_states_all, aes(x = limiar, y = pop_est, color = code_state
   labs(x = "Forest cover threshold (%)", y = "Number of FPP", color = "State") +
   theme_classic(base_size = 20) -> SF_2
 
-ggsave(plot = SF_2, filename = "/Users/user/Library/CloudStorage/OneDrive-TheUniversityofManchester/outros_trampos/Manuscritos/FPP_caat/manuscript/PNAS/PNAS_lucas_resubmissao/SF_2.jpg")
+# ggsave(plot = SF_2, filename = "/Users/user/Library/CloudStorage/OneDrive-TheUniversityofManchester/outros_trampos/Manuscritos/FPP_caat/manuscript/PNAS/PNAS_lucas_resubmissao/SF_2.jpg")
 
 #Rank of states by estimated number of FPP----
 limiares_ranking <- c(20, 50, 70)

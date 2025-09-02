@@ -366,7 +366,7 @@ aw_interpolate(.data = caat_mun_2022_5880,                # malha destino (2022)
                sid = code_mun,                 # ID único da malha origem
                weight = "sum",                  # tipo de agregação
                output = "sf",               # retorna um objeto sf
-               intensive = c("perc_agrifam_cadunico_2012", "perc_popUrb_2010",
+               intensive = c("perc_agrifam_cadunico_2012", "perc_popUrb_2010", "perc_popRur_2010",
                              "ifdm_saude_2013", "perc_pessoas_cadunico_2012",
                              "taxa_u5mort_2010", "perc_cisternas_2010",
                              "irrigacao_hectare_2010", "perc_saneamento_2010",
@@ -467,13 +467,14 @@ tabela_buffer%>%
   glimpse -> tabela_buffer_nova
 
 # writexl::write_xlsx(x = tabela_buffer_nova, path = "data/tabela_buffer_nova.xlsx")
-st_write(obj = tabela_buffer_nova, dsn = "/Users/user/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap3/data/tabela_buffer_nova.gpkg", append=F)
+# st_write(obj = tabela_buffer_nova, dsn = "/Users/user/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap3/data/tabela_buffer_nova.gpkg", append=F)
 
 ##Escala de município----
 # 1) Deixa no formato long
-df_long <- tabela_buffer %>%
+df_long <- tabela_buffer %>% 
+  filter(perc_forest_2022 >= 20) %>% 
   pivot_longer(
-    cols = matches("perc_forest_\\d+|pop_\\d+"),
+    cols = matches("perc_forest_\\d+|fpp_\\d+"),
     names_to = c("var", "year"),
     names_pattern = "(.*)_(\\d+)"
   )
@@ -498,7 +499,8 @@ df_wide %>%
   left_join(y = dados_mun_awa_2010, by = "code_mun") %>% 
   left_join(y = dados_mun_awa_2017, by = c("code_mun", "geometry")) %>% 
   left_join(y = caat_mun_dados_2022, by = c("code_mun", "geometry")) %>% 
-  #remover as colunas que não fazem sentido
+  select(-starts_with("sum_perc_"), -ends_with("2017"), -ends_with("2018"), - Gini, -code_short) %>%  #remover as colunas que não fazem sentido
   glimpse -> tab_mun_nova
 
-# writexl::write_xlsx(x = tab_mun_nova, path = "data/tabela_mun_nova.xlsx")
+writexl::write_xlsx(x = tab_mun_nova, path = "data/tabela_mun_nova.xlsx")
+write_sf(obj = tab_mun_nova, dsn = "/Users/user/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap3/data/tab_mun_nova.gpkg")

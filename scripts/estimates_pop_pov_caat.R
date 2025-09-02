@@ -36,3 +36,16 @@ renda_flag %>%
   group_by(in_caatinga) %>% 
   summarise(renda_media = mean(rendaResp_mean_2022, na.rm = TRUE)) %>% 
   glimpse
+
+## mudança na população rural da Caatinga----
+tab_mun_nova %>%
+  mutate(rural_pop_perc_change = perc_popRur_2022 - perc_popRur_2010) %>% 
+  mutate(
+    tendencia = case_when(
+      rural_pop_perc_change > 0  ~ "Crescendo",
+      rural_pop_perc_change < 0  ~ "Diminuindo",
+      TRUE             ~ "Estável"
+    )
+  ) %>%
+  count(tendencia) %>%
+  mutate(perc = 100 * n / sum(n))
