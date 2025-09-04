@@ -2,135 +2,111 @@
 #Script to creat LISA clusters
 
 #library----
+library(sf)
+library(spdep)
+library(dplyr)
+library(ggplot2)
+library(cowplot)
 
 #data----
-read.csv(file = here("data/tabela_geral.csv")) -> tab_geral
-read_xlsx(path = "/home/alenc/Documents/Doutorado/tese/cap1/forest-develop/data/dbcap1_rma.xlsx") -> dbcap1_rma
-read_xlsx(path = "/home/alenc/Documents/Doutorado/tese/cap0/data/atlas_dadosbrutos_00_10.xlsx", 
-          sheet = 2) -> dados_atlas
+read_sf("/Users/user/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap3/data/tab_mun_analysis.gpkg") -> tab_mun_analysis
 
-##table urban population----
-dados_atlas %>% 
-  select(i, Codmun7, pesourb) %>% 
-  pivot_wider(names_from = i, values_from = pesourb, names_prefix = "pop_urb_") %>% 
-  glimpse -> pop_urb
+read_biomes() %>% 
+  filter (name_biome == "Caatinga") -> caat_shp
+read_municipality(year = 2022) -> br_mun
 
-##table municipalities----
-tab_geral %>% 
-  select(buff_id, code_muni, pland_nvc_06, pland_nvc_17, vari_perc_nvc, pop_rural_WP_06,
-         pop_rural_WP_17, vari_perc_pop_rural, perc_area_agrifam_06, perc_area_agrifam_17) %>% 
-  left_join(y = select(dbcap1_rma, code_muni, IDHM_L_2000, IDHM_L_2010, expov_2000,
-                       expov_2010, gini_2000, gini_2010, u5mort_2000, U5mort_2010),
-            by = "code_muni") %>%
-  left_join(y = pop_urb, by = c("code_muni" = "Codmun7")) %>%
-  group_by(code_muni) %>%
-  summarise(mean_nvc_2000 = mean(pland_nvc_06),
-            mean_nvc_2010 = mean(pland_nvc_17),
-            # mean_change_nvc = mean(vari_perc_nvc),
-            mean_change_nvc_mun = mean_nvc_2010 - mean_nvc_2000,
-            sum_fpp_2000 = sum(pop_rural_WP_06),
-            sum_fpp_2010 = sum(pop_rural_WP_17),
-            # mean_change_fpp = mean(vari_perc_pop_rural),
-            mean_change_fpp_mun = ((sum_fpp_2010/sum_fpp_2000)-1)*100,
-            across(.cols = perc_area_agrifam_06:pop_urb_2010, .fns = mean)) %>% 
-  filter(!is.na(.$code_muni)) %>%
-  na.omit() %>% 
-  glimpse -> tab_mun
+##organisation----
+st_transform(x = tab_mun_analysis, crs = 5880) -> tab_mun_analysis
+st_transform(x = caat_shp, crs = 5880) -> caat_shp
+st_transform(x = br_states, crs = 5880) -> br_states
+st_transform(x = br_mun, crs = 5880) -> br_mun
+br_states[caat_shp,] -> states_caat
+br_mun[caat_shp,] -> mun_caat
 
-## Table for absolute change in development indicators----
-tab_mun %>%
-  mutate(
-    code_muni = code_muni,
-    mean_change_nvc = mean_change_nvc_mun,
-    mean_change_fpp = mean_change_fpp_mun,
-    change_agrifam = perc_area_agrifam_17 - perc_area_agrifam_06,
-    change_popUrb = pop_urb_2010 - pop_urb_2000,
-    change_idhL = IDHM_L_2010 - IDHM_L_2000,
-    change_expov = expov_2010 - expov_2000,
-    change_gini = gini_2010 - gini_2000,
-    change_u5mort = U5mort_2010 - u5mort_2000,
-    .keep = "unused"
-  ) %>% 
-  mutate(
-    cat_change = if_else(
-      condition = mean_change_nvc > 0 & mean_change_fpp > 0,
-      true = "GG",
-      false = if_else(
-        condition = mean_change_nvc > 0 & mean_change_fpp < 0,
-        true = "GP",
-        false = if_else(
-          condition =  mean_change_nvc < 0 & mean_change_fpp > 0,
-          true = "PG",
-          false = if_else(
-            mean_change_nvc < 0 & mean_change_fpp < 0,
-            true = "PP",
-            false = "stable"
-          )
-        )
-      )
-    ),
-    .before = 2
-  ) %>% 
-  filter(cat_change != "stable") %>%
-  glimpse -> tab_abs_change_mun
+coords_estados <- data.frame(
+  sigla = c("MG", "BA", "SE", "AL", "PE", "PB", "RN", "CE", "PI"),
+  x = c(-42, -39.5, -36.5, -35.5, -34.5, -34.4, -36, -39, -42.4),
+  y = c(-16.8, -15, -11, -10, -8.5, -7, -4.7, -2.9, -5)
+)
+
+##spatial matrix----
+poly2nb(tab_mun_analysis$geom, 
+        queen=TRUE) -> mat_dist_mun_caat
+
+nb2listw(mat_dist_mun_caat) -> mat_dist_list_mun_caat
 
 #analysis----
-##spatial matrix----
-read_municipality(simplified = F)->mun_cat
-
-tab_abs_change_mun %>% 
-  left_join(y = select(mun_cat,
-                       code_muni,
-                       geom),
-            by = "code_muni"
-  ) %>% 
-  glimpse -> tab_abs_change_mun_map
-
-poly2nb(tab_abs_change_mun_map$geom, 
-        queen=TRUE
-) -> mat_dist_abs_change_mun
-
-nb2listw(mat_dist_abs_change_mun,
-         zero.policy = T
-) -> mat_dist_list_abs_change_mun
-
 ##fpp change----
-localmoran(x = tab_abs_change_mun$mean_change_nvc,
-           listw = mat_dist_list_abs_change_mun,
-           zero.policy = T) -> Lmoran_change_nvc
+localmoran(x = tab_mun_analysis$mean_fpp_perc_change,
+           listw = mat_dist_list_mun_caat) -> Lmoran_change_fpp
 
-queen_weights(sf_obj = st_as_sf(tab_abs_change_mun_map)) -> qw_tab_abs_change_mun
+###classic lisa
+mean_fpp_change <- mean(tab_mun_analysis$mean_fpp_perc_change, na.rm = TRUE)
 
-local_moran(w = qw_tab_abs_change_mun,
-            df = tab_abs_change_mun["mean_change_fpp"],
-) -> Lmoran_change_fpp
+tab_mun_analysis %>%
+  mutate(
+    Ii = Lmoran_change_fpp[,1],       # estatística de Moran local
+    EIi = Lmoran_change_fpp[,2],      # expectativa
+    VarIi = Lmoran_change_fpp[,3],    # variância
+    ZIi = Lmoran_change_fpp[,4],      # valor z
+    p_value = Lmoran_change_fpp[,5],   # p-valor,
+    cluster_type = case_when(
+      mean_fpp_perc_change >= mean_fpp_change & Ii > 0 & p_value <= 0.05 ~ "High-High",
+      mean_fpp_perc_change <  mean_fpp_change & Ii > 0 & p_value <= 0.05 ~ "Low-Low",
+      mean_fpp_perc_change >= mean_fpp_change & Ii < 0 & p_value <= 0.05 ~ "High-Low",
+      mean_fpp_perc_change <  mean_fpp_change & Ii < 0 & p_value <= 0.05 ~ "Low-High",
+      TRUE ~ "Not significant"
+    )
+  ) %>% 
+  glimpse -> tab_mun_analysis
 
-lisa_labels(Lmoran_change_fpp) -> moran_lbls_fpp
-setNames(lisa_colors(Lmoran_change_fpp), moran_lbls_fpp) -> moran_colors_fpp
+###lisa mean = 0
+lag.listw(x = mat_dist_list_mun_caat,
+          var = tab_mun_analysis$mean_fpp_perc_change) -> lag_x
 
-tab_abs_change_mun_map %>%
-  st_drop_geometry() %>%
-  select(code_muni) %>%
-  mutate(cluster_num = lisa_clusters(Lmoran_change_fpp) + 1, # add 1 bc clusters are zero-indexed
-         cluster = factor(moran_lbls_fpp[cluster_num], levels = moran_lbls_fpp)) %>%
-  right_join(tab_abs_change_mun_map, by = "code_muni") %>%
-  st_as_sf() %>%
-  glimpse -> fpp_cluster
+# 5) p-valor (com correção para múltiplos testes – recomendado)
+p_raw  <- Lmoran_change_fpp[, 5]
+p_fdr  <- p.adjust(p_raw, method = "fdr")  # ou "holm"
 
-###map----
-ggplot(fpp_cluster, aes(fill = cluster)) +
-  geom_sf(color = "white", size = 0) +
-  scale_fill_manual(values = moran_colors_fpp, na.value = "green") +
-  theme_map()
+tab_mun_analysis %>%
+  mutate(
+    Ii      = Lmoran_change_fpp[,1],
+    z_Ii    = Lmoran_change_fpp[,4],
+    p_value = p_raw,
+    p_fdr   = p_fdr,
+    lag_x   = lag_x,
+    # Rotulagem baseada em ZERO (ganho/perda), usando significância do LISA
+    cluster_zero = case_when(
+      p_fdr <= 0.05 & x >  0 & lag_x >  0 ~ "High-High",
+      p_fdr <= 0.05 & x <  0 & lag_x <  0 ~ "Low-Low",
+      p_fdr <= 0.05 & x >  0 & lag_x <  0 ~ "High-Low",
+      p_fdr <= 0.05 & x <  0 & lag_x >  0 ~ "Low-High",
+      TRUE ~ "Not significant"
+    )
+  ) -> tab_mun_analysis
 
-###rates of change----
-fpp_cluster %>% 
-  as_tibble(.) %>% 
-  filter(cluster == "High-High" | cluster == "Low-Low") %>% 
-  mutate(abs_fpp_change = sum_fpp_2010 - sum_fpp_2000,
-         perc_fpp_change = (abs_fpp_change/sum_fpp_2010)*100,
-         annual_fpp_change = perc_fpp_change/11) %>% 
-  group_by(cluster) %>%
-  summarise(mean_fpp_change = mean(annual_fpp_change),
-           sd_fpp_change = sd(annual_fpp_change)) %>%
-  glimpse
+
+##fpp change per cluster----
+tab_mun_analysis %>%
+  group_by(cluster_type) %>%
+  summarise(
+    media_change = mean(mean_fpp_perc_change, na.rm = TRUE),
+    sd_change    = sd(mean_fpp_perc_change, na.rm = TRUE),
+    n_municipios = n(),
+    .groups = "drop"
+  ) -> resumo_cluster
+
+# resumo geral para o bioma
+tab_mun_analysis %>%
+  as_tibble() %>% 
+  summarise(
+    cluster_type = "Bioma inteiro",
+    media_change = mean(mean_fpp_perc_change, na.rm = TRUE),
+    sd_change    = sd(mean_fpp_perc_change, na.rm = TRUE),
+    n_municipios = n()
+  ) -> resumo_bioma
+
+# juntar os dois
+bind_rows(resumo_cluster, resumo_bioma) -> resumo_final
+
+resumo_final

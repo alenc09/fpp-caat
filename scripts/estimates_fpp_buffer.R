@@ -105,13 +105,19 @@ calc_threshold_22 <- function(t) {
   prop_area_ge   <- mean(df$hit, na.rm = TRUE)                                 # proporção de buffers ≥ t
   area_ge_est_km2 <- prop_area_ge * area_bioma_km2
   pop_est_ge     <- dens_hat * area_ge_est_km2
+  n_buffers <- sum(df$hit, na.rm = TRUE)
+  mean_perc <- ifelse(n_buffers > 0, mean(df$perc_forest_2022[df$hit], na.rm = TRUE), NA_real_)
+  sd_perc   <- ifelse(n_buffers > 1, sd(df$perc_forest_2022[df$hit], na.rm = TRUE), NA_real_)
   
   tibble(
     threshold = t,
     dens_hat_p_km2 = dens_hat,
     prop_area_ge   = prop_area_ge,
     area_ge_est_km2 = area_ge_est_km2,
-    pop_est_ge      = pop_est_ge
+    pop_est_ge      = pop_est_ge,
+    n_buffers        = n_buffers,
+    mean_perc        = mean_perc,
+    sd_perc          = sd_perc
   )
 }
 
@@ -191,111 +197,3 @@ results_bioma_diff %>%
   glimpse -> results_bioma_diff
 
 
-###Cumulative population total----
-###Cumulative from 10 to 100----
-list()-> list_fpp_state
-for(i in seq(10,100,10)){
-  tab_fpp_state %>%
-    filter(pland_nvc_17 > i) %>%
-    group_by(code_uf) %>%
-    summarise(n_buff = n(),
-              sum_fpp = sum(pop_rural_WP_17)) %>%
-    glimpse -> a
-  a -> list_fpp_state[[i]]
-}
-
-# for (i in seq(10,100,10)) {
-#   list_fpp_state[[i]] -> get(paste0("fpp_state_", i))
-# }
-
-list_fpp_state[[10]]-> fpp_state_10
-list_fpp_state[[20]]-> fpp_state_20
-list_fpp_state[[30]]-> fpp_state_30
-list_fpp_state[[40]]-> fpp_state_40
-list_fpp_state[[40]]-> fpp_state_40
-list_fpp_state[[50]]-> fpp_state_50
-list_fpp_state[[60]]-> fpp_state_60
-list_fpp_state[[70]]-> fpp_state_70
-list_fpp_state[[80]]-> fpp_state_80
-list_fpp_state[[90]]-> fpp_state_90
-list_fpp_state[[100]]-> fpp_state_100
-
-fpp_state_10 %>%
-  select(-n_buff) %>%
-  left_join(select(fpp_state_20, -n_buff), by = "code_uf") %>%
-  rename(sum_fpp_10 = sum_fpp.x,
-         sum_fpp_20 = sum_fpp.y) %>%
-  left_join(select(fpp_state_30, -n_buff), by = "code_uf") %>%
-  rename(sum_fpp_30 = sum_fpp) %>%
-  left_join(select(fpp_state_40, -n_buff), by = "code_uf") %>%
-  rename(sum_fpp_40 = sum_fpp) %>%
-  left_join(select(fpp_state_50, -n_buff), by = "code_uf") %>%
-  rename(sum_fpp_50 = sum_fpp) %>%
-  left_join(select(fpp_state_60, -n_buff), by = "code_uf") %>%
-  rename(sum_fpp_60 = sum_fpp) %>%
-  left_join(select(fpp_state_70, -n_buff), by = "code_uf") %>%
-  rename(sum_fpp_70 = sum_fpp) %>%
-  left_join(select(fpp_state_80, -n_buff), by = "code_uf") %>%
-  rename(sum_fpp_80 = sum_fpp) %>%
-  left_join(select(fpp_state_90, -n_buff), by = "code_uf") %>%
-  rename(sum_fpp_90 = sum_fpp) %>%
-  left_join(select(fpp_state_100, -n_buff), by = "code_uf") %>%
-  rename(sum_fpp_100 = sum_fpp) %>%
-  glimpse -> fpp_state_all
-
-fpp_state_all[-10,]%>%
-  replace(is.na(.), 0) %>%
-  pivot_longer(cols = 2:11,
-               names_sep = "fpp_",
-               names_to = c(".value", "nvc_thresh")) %>%
-  mutate(nvc_thresh = as.numeric(nvc_thresh),
-         code_uf = as.factor(code_uf))%>%
-  glimpse -> fpp_state_all_long
-
-fpp_state_all_long %>%
-  ggplot()+
-  geom_bump(aes(x = nvc_thresh, y = sum_, color = code_uf), linewidth = 1.5)+
-  # geom_segment(aes(x = 0, xend = 20, y = 258196.567, yend = 258196.567), linetype = "dashed", color = "lightgrey")+
-  # geom_segment(aes(x = 20, xend = 20, y = 0, yend = 258196.567), linetype = "dashed", color = "lightgrey")+
-  # geom_segment(aes(x = 0, xend = 50, y = 936495.780, yend = 936495.780), linetype = "dashed", color = "lightgrey")+
-  # geom_segment(aes(x = 50, xend = 50, y = 0, yend = 936495.780), linetype = "dashed", color = "lightgrey")+
-  # geom_segment(aes(x = 0, xend = 70, y = 1225985.470, yend = 1225985.470), linetype = "dashed", color = "lightgrey")+
-  # geom_segment(aes(x = 70, xend = 70, y = 0, yend = 1225985.470), linetype = "dashed", color = "lightgrey")+
-  labs(x = "Forest cover threshold (%)", y = "Number of FPP")+
-  scale_x_continuous(breaks = c(0, 10, 20,30,40,50,60,70,80,90,100))+
-  scale_y_continuous(breaks = c(0, 250000, 500000, 750000, 1000000, 1250000, 1500000, 1750000, 2000000),
-                       labels = comma)+
-  scale_color_brewer(type = "qual", palette = "Set1", 
-                     labels = c("Piauí", "Ceará", "Rio Grande do Norte",
-                                "Paraíba", "Pernambuco", "Alagoas", "Sergipe",
-                                "Bahia", "Minas Gerais"),
-                     name = "State")+
-  theme_classic() -> fpp_total_state
-
-##Figure fpp per state----
-ggarrange(fpp_total_state, fpp_dens_state,
-          common.legend = F,
-          legend = "right",
-          labels = "auto",
-          nrow = 2) %>%
-  
-  ggsave(filename = "img/fpp_state.jpg",
-         width = 6,
-         height = 8,
-         bg = "white")
-
-ggsave(plot = fpp_total_state,
-       filename = here("img/fpp_state.jpg"),
-       width = 6)
-# #descriptive development ind----
-# tab_context %>% 
-#   filter(year == 2010) %>%
-#   na.omit() %>% 
-#   summarise(sd_agrifam = sd(agrifam),
-#             sd_popurb = sd(pop_urb),
-#             sd_idhl = sd(IDHM_L),
-#             sd_expov = sd(expov),
-#             sd_gini = sd(gini),
-#             sd_u5mort = sd(u5mort)) %>% 
-#   # summary()
-# glimpse

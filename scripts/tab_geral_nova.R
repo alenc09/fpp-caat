@@ -502,5 +502,5 @@ df_wide %>%
   select(-starts_with("sum_perc_"), -ends_with("2017"), -ends_with("2018"), - Gini, -code_short) %>%  #remover as colunas que não fazem sentido
   glimpse -> tab_mun_nova
 
-writexl::write_xlsx(x = tab_mun_nova, path = "data/tabela_mun_nova.xlsx")
-write_sf(obj = tab_mun_nova, dsn = "/Users/user/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap3/data/tab_mun_nova.gpkg")
+# writexl::write_xlsx(x = tab_mun_nova, path = "data/tabela_mun_nova.xlsx")
+# write_sf(obj = tab_mun_nova, dsn = "/Users/user/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap3/data/tab_mun_nova.gpkg")

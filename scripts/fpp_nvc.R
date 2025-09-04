@@ -2,91 +2,133 @@
 #script para explorar a relação entre mudança na cobertura florestal e fpp
 
 #library----
-library(here)
-library(ggplot2)
+library(sf)
 library(dplyr)
-library(ggpubr)
+library(ggplot2)
+library(patchwork)
+
 
 #data----
-read.csv(here("data/tabela_geral.csv"))-> tab_geral
-tab_geral %>% 
-   glimpse
+read_sf("/Users/user/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap3/data/tab_buffer_analysis.gpkg", stringsAsFactors = T) -> tab_buff_analysis
+read_sf("/Users/user/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap3/data/tab_mun_analysis.gpkg", stringsAsFactors = T) -> tab_mun_analysis
+read_biomes() %>% 
+  filter (name_biome == "Caatinga") -> caat_shp
+read_state(year = 2020) -> br_states
+read_municipality(year = 2020) -> br_mun
+read_country() -> br
 
-#análises exploratórias----
-## figure with all landscapes----
-ggplot(data = na.omit(tab_geral)) +
-  geom_point(aes(x = vari_perc_nvc, y = vari_perc_pop_rural,
+##organisation----
+tab_buff_analysis %>% 
+  mutate(forest_perc_change = if_else(condition = forest_perc_change > 100, 
+                                           true = 100,
+                                           false = forest_perc_change)) %>% 
+  filter(cat_change != "stable") %>%
+  filter(fpp_perc_change != Inf) %>%
+  filter(!is.na(cat_change)) %>%
+  filter(perc_forest_2022 >= 20) %>% 
+   glimpse -> tab_buff_analysis
+
+tab_mun_analysis %>% 
+  mutate(mean_forest_perc_change = if_else(condition = mean_forest_perc_change > 100, 
+                                      true = 100,
+                                      false = mean_forest_perc_change)) %>%
+  filter(cat_change != "stable") %>% 
+  glimpse -> tab_mun_analysis
+
+st_transform(x = tab_mun_analysis, crs = 5880) -> tab_mun_analysis
+st_transform(x = caat_shp, crs = 5880) -> caat_shp
+st_transform(x = br_states, crs = 5880) -> br_states
+st_transform(x = br_mun, crs = 5880) -> br_mun
+br_states[caat_shp,] -> states_caat
+br_mun[caat_shp,] -> mun_caat
+
+coords_estados <- data.frame(
+  sigla = c("MG", "BA", "SE", "AL", "PE", "PB", "RN", "CE", "PI"),
+  x = c(-42, -39.5, -36.5, -35.5, -34.5, -34.4, -36, -39, -42.4),
+  y = c(-16.8, -15, -11, -10, -8.5, -7, -4.7, -2.9, -5)
+)
+#análises----
+##at landscape level----
+###quantifying fpp and forest cover change per category
+tab_buff_analysis %>%
+  group_by(cat_change) %>%  # class = GG, GP, PG, PP
+  summarise(
+    n_paisagens = n(),                                # número de paisagens
+    total_pop_2010 = sum(fpp_2010, na.rm = TRUE),     # população total em 2010
+    total_pop_2022 = sum(fpp_2022, na.rm = TRUE),     # população total em 2022
+    mean_pop_change = mean(fpp_perc_change, na.rm = TRUE),     # média da mudança populacional (%)
+    mean_forest_change = mean(forest_perc_change, na.rm = TRUE), # média da mudança florestal (%)
+    mean_foresr_cover = mean(perc_forest_2022),
+    .groups = "drop"
+  ) -> tab_summary_landscapes
+
+tab_summary_landscapes
+
+###figure with all landscapes
+tab_buff_analysis %>%
+  ggplot() +
+  geom_point(aes(x = forest_perc_change, y = fpp_perc_change,
                  colour = cat_change), alpha = 0.3, stroke = 0, size = 2) +
   ylim(-100, 200) +
   geom_hline(yintercept = 0) +
   geom_vline(xintercept = 0) +
-  annotate(geom = "text", label = "n = 1894", x = 30, y = 150, color = "#018571", fontface = "bold")+
-  annotate(geom = "text", label = "n = 1138", x = 30, y = -80, color = "#80cdc1", fontface = "bold")+
-  annotate(geom = "text", label = "n = 1808", x = -25, y = 150, color = "#dfc27d", fontface = "bold")+
-  annotate(geom = "text", label = "n = 888", x = -25, y = -80, color = "#a6611a", fontface = "bold")+
+  annotate(geom = "text", label = "n = 628", x = 60, y = 150, color = "#018571", fontface = "bold")+
+  annotate(geom = "text", label = "n = 1853", x = 60, y = -80, color = "#80cdc1", fontface = "bold")+
+  annotate(geom = "text", label = "n = 1144", x = -60, y = 150, color = "#dfc27d", fontface = "bold")+
+  annotate(geom = "text", label = "n = 3605", x = -60, y = -80, color = "#a6611a", fontface = "bold")+
   xlab("Change in forest cover (%)") +
   ylab("Change in FPP (%)") +
   scale_color_manual(values = c("#018571", "#80cdc1", "#dfc27d", "#a6611a"))+
   theme_classic()+
   theme(legend.position = "none",
-        panel.background = element_rect(color = "white")) -> pop_nvc_all
+        panel.background = element_rect(color = "white")) -> fpp_forest_all
 
-##Figure without outliers and landscapes above on SD----
-Q <- quantile(tab_geral$vari_perc_nvc, probs=c(.25, .75), na.rm = TRUE)
-iqr <- IQR(tab_geral$vari_perc_nvc, na.rm = T)
-up <-  Q[2]+1.5*iqr # Upper Range
-low<- Q[1]-1.5*iqr # Lower Range
+##at municipality scale----
+###quantifying fpp and forest cover change per category
+tab_mun_analysis %>%
+  group_by(cat_change) %>%  # class = GG, GP, PG, PP
+  summarise(
+    n_mun = n(),                                # número de paisagens
+    total_pop_2010 = sum(mean_fpp_2010, na.rm = TRUE),     # população total em 2010
+    total_pop_2022 = sum(mean_fpp_2022, na.rm = TRUE),     # população total em 2022
+    mean_pop_change = mean(mean_fpp_perc_change, na.rm = TRUE),     # média da mudança populacional (%)
+    mean_forest_change = mean(mean_forest_perc_change, na.rm = TRUE), # média da mudança florestal (%)
+    mean_forest_cover = mean(mean_perc_forest_2022),
+    .groups = "drop"
+  ) -> tab_summary_mun
 
-quantile(tab_geral$vari_perc_pop_rural, probs=c(.25, .75), na.rm = TRUE) -> Q_fpp
-IQR(tab_geral$vari_perc_pop_rural, na.rm = T) -> iqr_fpp
-Q_fpp[2]+1.5*iqr_fpp -> up_fpp # Upper Range
-Q_fpp[1]-1.5*iqr_fpp -> low_fpp # Lower Range
+tab_summary_mun
 
-tab_geral %>% 
-  select(buff_id, vari_perc_nvc, vari_perc_pop_rural, cat_change) %>% 
-  filter(vari_perc_nvc < up &
-           vari_perc_nvc > low &
-           vari_perc_pop_rural < up_fpp &
-           vari_perc_pop_rural > low_fpp) %>% 
-  glimpse -> tab_s_outlier
+## map cat change
+ggplot(tab_mun_analysis) +
+  geom_sf(data = mun_caat, aes(geometry = geom, fill = "code_muni"), fill = "grey90", color = "grey", linewidth = 0.1) +
+  geom_sf(aes(fill = cat_change), linewidth = 0, color = "grey") +
+  scale_fill_manual(values = c("GG" = "#018571",
+                               "GP" = "#80cdc1",
+                               "PG" = "#dfc27d",
+                               "PP" = "#a6611a"),
+                    labels = c("GG" = "gain-gain",
+                               "GP" = "gain-lose",
+                               "PG" = "lose-gain",
+                               "PP" = "lose-lose"),
+                    name = "Forest-People") +
+  geom_sf(data = states_caat, fill="transparent", linewidth=0.3) +
+  coord_sf(
+    xlim = c(bbox["xmin"] - 70000, bbox["xmax"] + 100000),
+    ylim = c(bbox["ymin"] - 30000, bbox["ymax"] + 1000),
+    expand = F) +
+  geom_sf_text(data = coords_estados_sf, aes(label = sigla),
+               size = 3) +
+  theme_map()+
+  theme(legend.text = element_text(size = 10),
+        legend.title = element_text(size = 11),
+        legend.position = c(0.8, 0.2)) -> map_forest_fpp
 
-mean(tab_s_outlier$vari_perc_nvc) + sd(tab_s_outlier$vari_perc_nvc)
-mean(tab_s_outlier$vari_perc_nvc) - sd(tab_s_outlier$vari_perc_nvc)
-mean(tab_s_outlier$vari_perc_pop_rural, na.rm=T) + sd(tab_s_outlier$vari_perc_pop_rural, na.rm=T)
-mean(tab_s_outlier$vari_perc_pop_rural, na.rm=T) - sd(tab_s_outlier$vari_perc_pop_rural, na.rm=T)
+#Figure 3----
+fpp_forest_all + map_forest_fpp +
+  plot_layout(widths = c(0.8, 1)) +
+  plot_annotation(tag_levels = "a") -> fig_3
 
-tab_s_outlier %>%  
-  filter(vari_perc_nvc > 6.575527 |
-           vari_perc_nvc < -5.839117) %>% 
-  filter(vari_perc_pop_rural > 24.18684 |
-           vari_perc_pop_rural < -11.30523) %>%
-  ggplot(aes(x = vari_perc_nvc, y = vari_perc_pop_rural, color = cat_change))+
-  geom_point(alpha = 0.3, stroke = 0, size = 2.5)+
-  geom_hline(yintercept = 0)+
-  geom_vline(xintercept = 0)+
-  labs(title = "b) Sampled landscapes over one SD (n = 496)")+
-  scale_color_manual(values = c("#018571", "#80cdc1", "#dfc27d", "#a6611a"),
-                     label = c("gain-gain", "gain-lose", "lose-gain", "lose-lose"))+
-  annotate(geom = "text", label = "n = 86", x = 10, y = 15, color = "#018571", fontface = "bold")+
-  annotate(geom = "text", label = "n = 143", x = 10, y = -5, color = "#80cdc1", fontface = "bold")+
-  annotate(geom = "text", label = "n = 135", x = -10, y = 15, color = "#dfc27d", fontface = "bold")+
-  annotate(geom = "text", label = "n = 132", x = -10, y = -5, color = "#a6611a", fontface = "bold")+
-  xlab("Change in native vegetation cover (%)") +
-  ylab("Change in FPP (%)")+
-  theme_classic()+
-  theme(legend.title = element_blank(),
-        panel.background = element_rect(color = "white")) -> pop_nvc_sd
-
-ggarrange(pop_nvc_all, pop_nvc_sd, common.legend = T, legend = "bottom") %>% 
-  ggsave(plot = ., filename = here("img/fig.fpp_nvc.jpg"), dpi = 300,
-         bg = "white", width = 10)
-
-##counting outliers----
-tab_s_outlier %>%  
-  filter(vari_perc_nvc > 6.575527 |
-           vari_perc_nvc < -5.839117) %>% 
-  filter(vari_perc_pop_rural > 24.18684 |
-           vari_perc_pop_rural < -11.30523) %>% 
-  group_by(cat_change) %>% 
-  summarise(n_land = n()) %>% 
-  glimpse
+ggsave(plot = fig_3, filename = "/Users/user/Library/CloudStorage/OneDrive-TheUniversityofManchester/outros_trampos/Manuscritos/FPP_caat/manuscript/PNAS/PNAS_lucas_resubmissao/Fig_3.jpg",
+       width = 10,
+       height = 5)
