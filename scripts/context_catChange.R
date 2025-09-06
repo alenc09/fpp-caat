@@ -1,196 +1,123 @@
+# Thu Sep  4 14:05:11 2025 ------------------------------
 # Script to evaluate changes in socioeconomic conditions per group
 
 #Library----
-library(readxl)
-library(here)
-library(tidyr)
+library(sf)
 library(dplyr)
-library(ggplot2)
-library(WRS2)
-library(emmeans)
+library(nnet)
+library(spdep)
+library(spatialreg)
 
 #data----
-read.csv(file = here("data/tabela_geral.csv")) -> tab_geral
-read_xlsx(path = "/home/alenc/Documents/Doutorado/tese/cap1/forest-develop/data/dbcap1_rma.xlsx") -> dbcap1_rma
-read_xlsx(path = "/home/alenc/Documents/Doutorado/tese/cap0/data/atlas_dadosbrutos_00_10.xlsx", 
-          sheet = 2) -> dados_atlas
+read_sf("/Users/user/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap3/data/tab_mun_analysis.gpkg", stringsAsFactors = T) -> tab_mun_analysis
 
-##manipulation----
-dados_atlas %>% 
-  select(i, Codmun7, pesourb) %>% 
-  pivot_wider(names_from = i, values_from = pesourb, names_prefix = "pop_urb_") %>% 
-  glimpse -> pop_urb
-  
-
-tab_geral %>% 
-  select(X, code_muni, vari_perc_nvc, vari_perc_pop_rural, agrifam_06, agrifam_17,
-         pop_urb_mun_06, pop_urb_mun_17) %>% 
-  left_join(y = select(dbcap1_rma, code_muni, IDHM_L_2000, IDHM_L_2010, expov_2000,
-                       expov_2010, gini_2000, gini_2010, u5mort_2000, U5mort_2010),
-            by = "code_muni") %>% 
-  left_join(y = pop_urb, by = c("code_muni" = "Codmun7")) %>%  
-  group_by(code_muni) %>% 
-  summarise(mean_change_nvc = mean(vari_perc_nvc),
-            mean_change_fpp = mean(vari_perc_pop_rural),
-            agrifam_2000 = mean(agrifam_06),
-            agrifam_2010 = mean(agrifam_17),
-            pop_urb_2000 = mean(pop_urb_2000),
-            pop_urb_2010 = mean(pop_urb_2010),
-            IDHM_L_2000 = mean(IDHM_L_2000),
-            IDHM_L_2010 = mean(IDHM_L_2010),
-            expov_2000 = mean(expov_2000),
-            expov_2010 = mean(expov_2010),
-            gini_2000 = mean(gini_2000),
-            gini_2010 = mean(gini_2010),
-            u5mort_2000 = mean(u5mort_2000),
-            u5mort_2010 = mean(U5mort_2010)) %>%
-  filter(!is.na(.$code_muni)) %>%
-  mutate(
-    cat_change = if_else(
-      condition = mean_change_nvc > 0 & mean_change_fpp > 0,
-      true = "GG",
-      false = if_else(
-        condition = mean_change_nvc > 0 & mean_change_fpp < 0,
-        true = "GP",
-        false = if_else(
-          condition =  mean_change_nvc < 0 & mean_change_fpp > 0,
-          true = "PG",
-          false = if_else(
-            mean_change_nvc < 0 & mean_change_fpp < 0,
-            true = "PP",
-            false = "stable"
-          )
-        )
-      )
-    )
-  ) %>%
-  filter(cat_change != "stable") %>% 
-  pivot_longer(cols = 4:15, names_to = c(".value", "year"), names_pattern = "(.+)_(.+)") %>% 
-  mutate(year = as.factor(year),
-         cat_change = as.factor(cat_change)) %>% 
-  glimpse -> tab_context
+##organisation----
+tab_mun_analysis %>% 
+  mutate(change_agrifam_cadunico = perc_agrifam_cadunico_2022 - perc_agrifam_cadunico_2012,
+         change_popUrb = perc_popUrb_2022 - perc_popUrb_2010,
+         change_ifdm_saude = ifdm_saude_2022 - ifdm_saude_2013,
+         change_pessoas_cadunico = perc_pessoas_cadunico_2022 - perc_pessoas_cadunico_2012,
+         change_taxa_u5mort = taxa_u5mort_2022 - taxa_u5mort_2010,
+         change_cisternas = perc_cisternas_2022 - perc_cisternas_2010,
+         change_irrigation = irrigacao_hectare_2022 - irrigacao_hectare_2010,
+         change_saneamento = perc_saneamento_2022 - perc_saneamento_2010,
+         change_public_light = perc_public_light_2022 - perc_public_light_2010,
+         change_mean_respRenda = mean_respRenda_2022 - mean_respRenda_2010,
+         change_bovino_hectare = bovino_hectare_2022 - bovino_hectare_2010,
+         change_caprino_hectare = caprino_hectare_2022 - caprino_hectare_2010,
+         change_pib_agro = perc_pib_agro_2021 - perc_pib_agro_2010,
+         .keep = "unused") %>% 
+  # filter(cat_change != "stable") %>% 
+  glimpse -> tab_mun_models
 
 
 #Analysis----
-##expov----
-aov(data = tab_context, formula =  expov ~ year*cat_change) -> aov.expov
-#plot(aov.expov)
-summary(aov.expov)
+multinom(data = tab_mun_models,
+         cat_change ~ change_agrifam_cadunico + change_popUrb + change_ifdm_saude +
+           change_pessoas_cadunico + change_taxa_u5mort + change_cisternas +
+           change_irrigation + change_saneamento + change_public_light) -> mod_multinom
 
-##gini----
-aov(data = tab_context, formula =  gini ~ year*cat_change) -> aov.gini
-#plot(aov.gini)
-summary(aov.gini)
-emmeans(aov.gini, ~ cat_change*year) -> emm.gini
-pairs(emm.gini, simple = "cat_change")
+summary(mod_multinom)
+exp(coef(mod_multinom))
 
-##agrifam----
-aov(data = tab_context, formula =  agrifam ~ year*cat_change) -> aov.agrifam
-#plot(aov.agrifam)
-t2way(data = tab_context, formula =  agrifam ~ year*cat_change)-> Raov.agrifam
-mcp2atm(data = tab_context, formula =  agrifam ~ year*cat_change) -> post.agrifam
-post.agrifam$contrasts
+##linear
+glm(data = tab_mun_models,
+    mean_forest_perc_change ~ change_agrifam_cadunico + change_popUrb + change_ifdm_saude +
+      change_mean_respRenda + change_taxa_u5mort + change_cisternas +
+      change_irrigation + change_saneamento + change_public_light +
+      change_bovino_hectare + change_caprino_hectare + change_pib_agro) -> mod_glm_forest
 
-##IDHM_L----
-aov(data = tab_context, formula =  IDHM_L ~ year*cat_change)-> aov.idhL
-#plot(aov.idhL)
-summary(aov.idhL)
-emmeans(aov.idhL, ~cat_change*year) -> emm.idhL
-pairs(emm.idhL, simple = "cat_change")
+car:::vif(mod_glm_forest)
+plot(mod_glm_forest)
+summary(mod_glm_forest)
+lm.morantest(model = mod_glm_forest, listw = mat_dist_list_mun_caat)
 
-##u5mort----
-aov(data = tab_context, formula =  u5mort ~ year*cat_change) -> aov.u5mort
-#plot(aov.u5mort)
-summary(aov.u5mort)
-emmeans(aov.u5mort, ~cat_change*year) -> emm.u5mort
-pairs(emm.u5mort, simple = "cat_change")
+glm(data = tab_mun_models,
+    mean_fpp_perc_change ~ change_agrifam_cadunico + change_popUrb + change_ifdm_saude +
+      change_mean_respRenda + change_taxa_u5mort + change_cisternas +
+      change_irrigation + change_saneamento + change_public_light +
+      change_bovino_hectare + change_caprino_hectare + change_pib_agro) -> mod_glm_fpp
 
-t2way(data = tab_context, formula =  u5mort ~ year*cat_change)
+car:::vif(mod_glm_fpp)
+plot(mod_glm_fpp)
+summary(mod_glm_fpp)
+lm.morantest(model = mod_glm_fpp, listw = mat_dist_list_mun_caat)
 
-##pop_urb----
-aov(data = tab_context, formula =  pop_urb ~ year*cat_change) -> aov.pop_urb
-#plot(aov.pop_urb)
+##spatial----
+poly2nb(tab_mun_analysis$geom, 
+        queen=TRUE) -> mat_dist_mun_caat
 
-t2way(data = tab_context, formula =  pop_urb ~ year*cat_change)-> Raov.pop_urb
-mcp2atm(data = tab_context, formula =  pop_urb ~ year*cat_change)-> post.pop_urb
-post.pop_urb$contrasts
+nb2listw(mat_dist_mun_caat) -> mat_dist_list_mun_caat
 
-#figures----
-##expov----
-tab_context %>% 
-ggplot(aes(x=year, y = expov, group = cat_change, color = cat_change, fill = cat_change))+
-  geom_smooth(method = "glm", alpha = 0.2)+
-  scale_x_discrete(expand = expansion(add = 0.1), name = "Year")+
-  scale_y_continuous(name = "Extreme poverty")+
-  scale_color_manual(name = "Forest-People", values = c("#018571", "#80cdc1", "#dfc27d", "#a6611a"),
-                     label = c("gain-gain", "gain-lose", "lose-gain", "lose-lose"))+
-  scale_fill_manual(name = "Forest-People", values = c("#018571", "#80cdc1", "#dfc27d", "#a6611a"),
-                    label = c("gain-gain", "gain-lose", "lose-gain", "lose-lose"))+
-  theme_classic() -> cat.expov
-  
+mean_forest_perc_change ~ change_agrifam_cadunico + change_popUrb + change_ifdm_saude +
+  change_mean_respRenda + change_taxa_u5mort + change_cisternas +
+  change_irrigation + change_saneamento + change_public_light +
+  change_bovino_hectare + change_caprino_hectare + change_pib_agro -> form_forest
 
-##gini----
-tab_context %>% 
-  ggplot(aes(x=year, y = gini, group = cat_change, color = cat_change, fill = cat_change))+
-  geom_smooth(method = "glm", alpha = 0.2)+
-  scale_x_discrete(expand = expansion(add = 0.1), name = "Year")+
-  scale_y_continuous(name = "Gini index")+
-  scale_color_manual(name = "Forest-People", values = c("#018571", "#80cdc1", "#dfc27d", "#a6611a"),
-                     label = c("gain-gain", "gain-lose", "lose-gain", "lose-lose"))+
-  scale_fill_manual(name = "Forest-People", values = c("#018571", "#80cdc1", "#dfc27d", "#a6611a"),
-                    label = c("gain-gain", "gain-lose", "lose-gain", "lose-lose"))+
-  theme_classic() -> cat.gini
-  
-##agrifam----
-tab_context %>% 
-  ggplot(aes(x=year, y = agrifam, group = cat_change, color = cat_change, fill = cat_change))+
-  geom_smooth(method = "glm", alpha = 0.2)+
-  scale_x_discrete(expand = expansion(add = 0.1), name = "Year")+
-  scale_y_continuous(name = "Family agriculures")+
-  scale_color_manual(name = "Forest-People", values = c("#018571", "#80cdc1", "#dfc27d", "#a6611a"),
-                     label = c("gain-gain", "gain-lose", "lose-gain", "lose-lose"))+
-  scale_fill_manual(name = "Forest-People", values = c("#018571", "#80cdc1", "#dfc27d", "#a6611a"),
-                    label = c("gain-gain", "gain-lose", "lose-gain", "lose-lose"))+
-  theme_classic() -> cat.agrifam
+errorsarlm(formula = form_forest,
+           data    = tab_mun_models,
+           listw   = mat_dist_list_mun_caat,
+           Durbin  = TRUE,       # isso ativa o "Durbin" (variáveis explicativas defasadas)
+           zero.policy = TRUE) -> mod_spatial_forest
 
-##IDH_L----
-tab_context %>% 
-  ggplot(aes(x=year, y = IDHM_L, group = cat_change, color = cat_change, fill = cat_change))+
-  geom_smooth(method = "glm", alpha = 0.2)+
-  scale_x_discrete(expand = expansion(add = 0.1), name = "Year")+
-  scale_y_continuous(name = "HDI - Longevity")+
-  scale_color_manual(name = "Forest-People", values = c("#018571", "#80cdc1", "#dfc27d", "#a6611a"),
-                     label = c("gain-gain", "gain-lose", "lose-gain", "lose-lose"))+
-  scale_fill_manual(name = "Forest-People", values = c("#018571", "#80cdc1", "#dfc27d", "#a6611a"),
-                    label = c("gain-gain", "gain-lose", "lose-gain", "lose-lose"))+
-  theme_classic() -> cat.IDHL
+summary(mod_spatial_forest)
 
-##u5mort----
-tab_context %>% 
-  ggplot(aes(x=year, y = u5mort, group = cat_change, color = cat_change, fill = cat_change))+
-  geom_smooth(method = "glm", alpha = 0.2)+
-  scale_x_discrete(expand = expansion(add = 0.1), name = "Year")+
-  scale_y_continuous(name = "Under five mortality")+
-  scale_color_manual(name = "Forest-People", values = c("#018571", "#80cdc1", "#dfc27d", "#a6611a"),
-                     label = c("gain-gain", "gain-lose", "lose-gain", "lose-lose"))+
-  scale_fill_manual(name = "Forest-People", values = c("#018571", "#80cdc1", "#dfc27d", "#a6611a"),
-                    label = c("gain-gain", "gain-lose", "lose-gain", "lose-lose"))+
-  theme_classic() -> cat.u5mort
+##fpp
+mean_fpp_perc_change ~ change_agrifam_cadunico + change_popUrb + change_ifdm_saude +
+  change_mean_respRenda + change_taxa_u5mort + change_cisternas +
+  change_irrigation + change_saneamento + change_public_light +
+  change_bovino_hectare + change_caprino_hectare + change_pib_agro -> form_fpp
 
-##pop_urb----
-tab_context %>% 
-  ggplot(aes(x=year, y = pop_urb, group = cat_change, color = cat_change, fill = cat_change))+
-  geom_smooth(method = "glm", alpha = 0.2)+
-  scale_x_discrete(expand = expansion(add = 0.1), name = "Year")+
-  scale_y_continuous(name = "Urban population")+
-  scale_color_manual(name = "Forest-People", values = c("#018571", "#80cdc1", "#dfc27d", "#a6611a"),
-                     label = c("gain-gain", "gain-lose", "lose-gain", "lose-lose"))+
-  scale_fill_manual(name = "Forest-People", values = c("#018571", "#80cdc1", "#dfc27d", "#a6611a"),
-                    label = c("gain-gain", "gain-lose", "lose-gain", "lose-lose"))+
-  theme_classic() -> cat.urb_pop
+errorsarlm(formula = form_fpp,
+           data    = tab_mun_models,
+           listw   = mat_dist_list_mun_caat,
+           Durbin  = TRUE,       # isso ativa o "Durbin" (variáveis explicativas defasadas)
+           zero.policy = TRUE) -> mod_spatial_fpp
 
-##Figure panel----
-ggarrange(cat.expov, cat.gini, cat.agrifam, cat.urb_pop, cat.IDHL, cat.u5mort,
-          common.legend = T) %>% 
-  ggsave(filename = here("img/fig.cat_change.jpg"), width = 10, bg = "white")
-  
+summary(mod_spatial_fpp)
+
+
+##valor bruto----
+glm(data = tab_mun_analysis,
+    mean_perc_forest_2022 ~  perc_agrifam_cadunico_2012 +
+      perc_popUrb_2010 + ifdm_saude_2013 + mean_respRenda_2010 + taxa_u5mort_2010 +
+      perc_cisternas_2010 + irrigacao_hectare_2010 + perc_saneamento_2010 + 
+      perc_public_light_2010 + bovino_hectare_2010 + caprino_hectare_2010 +
+      perc_pib_agro_2010) %>% 
+  summary
+
+glm(data = tab_mun_analysis,
+    mean_perc_forest_2023 ~ mean_perc_forest_2022 + perc_agrifam_cadunico_2022 +
+      perc_popUrb_2022 + ifdm_saude_2022 + mean_respRenda_2022 + taxa_u5mort_2022 +
+      perc_cisternas_2022 + irrigacao_hectare_2022 + perc_saneamento_2022 + 
+      perc_public_light_2022 + bovino_hectare_2022 + caprino_hectare_2022 +
+      perc_pib_agro_2021) %>% 
+  summary
+
+glm(data = tab_mun_analysis,
+    sum_fpp_2022 ~  perc_agrifam_cadunico_2022 +
+      perc_popUrb_2022 + ifdm_saude_2022 + mean_respRenda_2022 + taxa_u5mort_2022 +
+      perc_cisternas_2022 + irrigacao_hectare_2022 + perc_saneamento_2022 + 
+      perc_public_light_2022 + bovino_hectare_2022 + caprino_hectare_2022 +
+      perc_pib_agro_2021) %>% 
+  summary

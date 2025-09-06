@@ -36,14 +36,14 @@ read_xlsx("/Users/user/Library/CloudStorage/OneDrive-TheUniversityofManchester/S
 read_xlsx("/Users/user/Library/CloudStorage/OneDrive-TheUniversityofManchester/SFT/Data/Brazil/raw/statistical/esgoto_censo_2010.xlsx", sheet = 2) -> esgoto_censo_2010
 read_xlsx("/Users/user/Library/CloudStorage/OneDrive-TheUniversityofManchester/SFT/Data/Brazil/raw/statistical/esgoto_censo_2022.xlsx", sheet = 2) -> esgoto_censo_2022
 read_xlsx("/Users/user/Library/CloudStorage/OneDrive-TheUniversityofManchester/SFT/Data/Brazil/raw/statistical/iluminacao_censo_2010-2022.xlsx", sheet = 2) -> iliminacao_2010_2022
-
-
 read.csv("~/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap3/data/buffer_forest.csv") -> buffer_lc
 read_sf("~/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap3/data/buffer_fpp_5880.gpkg") -> buffer_fpp
 read_sf("/Users/user/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap3/data/caat_mun_2010_5880.shp") -> caat_mun_2010_5880
 read_xlsx("/Users/user/Library/CloudStorage/OneDrive-TheUniversityofManchester/SFT/Data/Brazil/raw/statistical/domicilios_br_2010.xlsx") -> domicilios_br_2010
 read_sf("/Users/user/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap3/data/caat_mun_2017_5880.gpkg") -> caat_mun_2017_5880
 read_sf("/Users/user/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap3/data/caat_mun_2022_5880.shp") -> caat_mun_2022_5880
+read_xlsx("/Users/user/Library/CloudStorage/OneDrive-TheUniversityofManchester/SFT/Data/Brazil/clean/statistical/cattle_production_10_22.xlsx") -> cattle_herd
+read_xlsx("/Users/user/Library/CloudStorage/OneDrive-TheUniversityofManchester/SFT/Data/Brazil/clean/statistical/pib_agricultura.xlsx") -> pib_agro
 
 #tratamento das planilhas----
 ##cadastro unico----
@@ -110,47 +110,31 @@ agrifam_cadunico %>%
               names_glue = "agrifam_cadunico_{date}") %>% 
   glimpse -> agrifam_cadunico_2012_2022
 
-##gini CT-scale----
+##renda domiciliar----
 sc_respRenda_2010 %>% 
-  as_tibble() %>% 
-  dplyr::select(code_tract, code_muni, V001, V007) %>% 
-  rename(total_domicilios_2010 = V001,
-         rendaResp_mean_2010 = V007) %>% 
-  mutate(renda_media_mun_2010 = sum(total_domicilios_2010*rendaResp_mean_2010, na.rm = T)/ sum(total_domicilios_2010, na.rm = T)) %>% 
-  glimpse -> sc_rendaResp_mean_2010
+  collect() %>% 
+  select(code_tract, code_muni, V087, V088) %>% 
+  mutate(code_tract = as.factor(code_tract),
+         code_mun = as.factor(code_muni),
+         respRenda_media_2010 = V088/V087,
+         pessoas_resp_2010 = V087,
+         .keep = "unused") %>% 
+  group_by(code_mun) %>%
+  summarise(
+    mean_respRenda_2010   = weighted.mean(respRenda_media_2010, pessoas_resp_2010, na.rm = TRUE)) %>% 
+  glimpse -> mun_respRenda_2010
 
 sc_respRenda_2022 %>% 
-  as_tibble() %>% 
-  dplyr::select(code_tract, code_muni, V06001, V06004) %>% 
-  rename(total_domicilios_2022 = V06001,
-         rendaResp_mean_2022 = V06004) %>%
-  mutate(renda_media_mun_2022 = sum(total_domicilios_2022*rendaResp_mean_2022, na.rm = T)/ sum(total_domicilios_2022, na.rm = T)) %>% 
-  glimpse -> sc_rendaResp_mean_2022
-
-
-# Função para calcular o Gini entre setores com pesos
-gini_setores <- function(renda, pesos) {
-  valid <- !is.na(renda) & !is.na(pesos)
-  if (sum(valid) < 2) return(NA_real_)  # precisa de pelo menos 2 setores válidos
-  res <- weighted.gini(renda[valid], pesos[valid])
-  return(res$Gini)
-}
-
-sc_rendaResp_mean_2010 %>%
-  group_by(code_muni) %>%
-  summarise(Gini = gini_setores(rendaResp_mean_2010, total_domicilios_2010),
-            .groups = "drop") %>% 
-  mutate(code_mun = as.factor(code_muni), .keep = "unused") %>% 
-  mutate(Gini = map_dbl(Gini, ~ .x[1])) %>% 
-  glimpse -> gini_municipal_2010
-
-sc_rendaResp_mean_2022 %>%
-  group_by(code_muni) %>%
-  summarise(Gini = gini_setores(rendaResp_mean_2022, total_domicilios_2022),
-            .groups = "drop") %>% 
-  mutate(code_mun = as.factor(code_muni), .keep = "unused") %>% 
-  mutate(Gini = map_dbl(Gini, ~ .x[1])) %>% 
-  glimpse -> gini_municipal_2022
+  collect() %>% 
+  select(code_tract, code_muni, V06001, V06004) %>% 
+  mutate(code_tract = as.factor(code_tract),
+         code_mun = as.factor(code_muni),
+         respRenda_media_2022 = V06004 * (3195.89/6474.09), #IPCA número-índice. dados coletados da tabela 1737 do IBGE-SIDRA
+         pessoas_resp_2022 = V06001,
+         .keep = "unused") %>% group_by(code_mun) %>%
+  summarise(
+    mean_respRenda_2022   = weighted.mean(respRenda_media_2022, pessoas_resp_2022, na.rm = TRUE)) %>% 
+  glimpse -> mun_respRenda_2022
 
 ##Infant mortality----
 u5mort_2010 %>% 
@@ -315,6 +299,20 @@ iliminacao_2010_2022 %>%
          .keep = "unused") %>% 
   glimpse -> iluminacao
 
+##gaaaaaado----
+cattle_herd %>% 
+  mutate(across(.cols = where(is.character), .fns = as.double)) %>% 
+  mutate(code_mun = as.factor(code_mun)) %>%
+  select(-name_mun, -starts_with("ovino")) %>% 
+  glimpse -> tab_gado
+
+##pib agricola----
+pib_agro %>% 
+  mutate(code_mun = as.factor(code_mun),
+         perc_pib_agro_2010 = as.double(pib_agro_perc_2010),
+         perc_pib_agro_2021 = pib_agro_perc_2021) %>% 
+  glimpse -> pib_agro
+
 #junção dados----
 buffer_lc %>% 
   mutate(id = as.character(id)) %>% 
@@ -336,7 +334,6 @@ caat_mun_2010_5880 %>%
   left_join(y = pop_mun_2010) %>% 
   left_join(y = dplyr::select(IFDM_saude_2013_2022, code_mun, ifdm_saude_2013), by = c("code_mun_short" = "code_mun")) %>% 
   left_join(y = dplyr::select(pessoas_cadunico_2012_2022, code_mun, pessoas_cadunico_2012), by = c("code_mun_short" = "code_mun")) %>% 
-  left_join(y = gini_municipal_2010) %>% 
   left_join(y = taxa_u5mort_2010, by = c("code_mun_short" = "code_mun")) %>% 
   left_join(y = dplyr::select(cisternas, code_mun, cisternas_2010), by = c("code_mun_short" = "code_mun")) %>% 
   mutate(cisternas_2010 = replace_na(cisternas_2010, 0)) %>% 
@@ -344,12 +341,18 @@ caat_mun_2010_5880 %>%
   left_join(y = dplyr::select(esgoto_censo_2010, code_mun, perc_saneamento_2010)) %>% 
   left_join(y = dplyr::select(iluminacao, code_mun, perc_public_light_2010)) %>% 
   left_join(y = domicilios_br_2010) %>% 
+  left_join(y = mun_respRenda_2010, by = "code_mun") %>% 
+  left_join(y = tab_gado, by = "code_mun") %>% 
+  select(-ends_with("2022")) %>% 
+  left_join(y = select(pib_agro, code_mun, perc_pib_agro_2010)) %>% 
   mutate(area_m2 = st_area(geometry),
          area_ha = as.numeric(area_m2)/10000,
          perc_agrifam_cadunico_2012 = (agrifam_cadunico_2012/domicilios_rural)*100,
          perc_pessoas_cadunico_2012 = (pessoas_cadunico_2012/pop_total_2010)*100,
          perc_cisternas_2010 = (cisternas_2010/domicilios_rural)*100,
-         irrigacao_hectare_2010 = irrigation_m3s_2010/area_ha) %>% 
+         irrigacao_hectare_2010 = irrigation_m3s_2010/area_ha,
+         bovino_hectare_2010 = bovino_2010/area_ha,
+         caprino_hectare_2010 = caprino_2010/area_ha) %>% 
   glimpse -> caat_mun_dados_2010
 
 # write_sf(obj = caat_mun_dados_2010, dsn = "/Users/user/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap3/data/caat_mun_dados_2010.gpkg")
@@ -370,65 +373,69 @@ aw_interpolate(.data = caat_mun_2022_5880,                # malha destino (2022)
                              "ifdm_saude_2013", "perc_pessoas_cadunico_2012",
                              "taxa_u5mort_2010", "perc_cisternas_2010",
                              "irrigacao_hectare_2010", "perc_saneamento_2010",
-                             "perc_public_light_2010")                 # ou variáveis densidade
+                             "perc_public_light_2010", "mean_respRenda_2010",
+                             "bovino_hectare_2010", "caprino_hectare_2010",
+                             "perc_pib_agro_2010")                 # ou variáveis densidade
                ) -> dados_mun_awa_2010
 
 dados_mun_awa_2010 %>% glimpse
 
-##2017
-censobr::read_tracts(dataset = "Basico", year = 2022) -> basico_2022
+# ##2017
 
-basico_2022 %>% 
-  collect() %>% 
-  dplyr::select(code_tract, code_muni, situacao, V0003) %>% 
-  filter(situacao == "Rural") %>% 
-  group_by(code_muni) %>% 
-  reframe(domicilios_rural_2022 = sum(V0003)) %>% 
-  mutate(code_mun = as.factor(code_muni), .keep = "unused") %>% 
-  glimpse -> domicilios_rural_brasil_2022
-
-caat_mun_2017_5880 %>%
-  dplyr::select(CD_GEOCMU) %>% 
-  mutate(code_mun = as.factor(CD_GEOCMU), .keep = "unused") %>% 
-  mutate(code_mun_short = code_mun %>%
-           as.character() %>%
-           str_sub(1, -2) %>%              
-           factor()) %>% 
-  left_join(y = dplyr::select(agrifam_cadunico_2012_2022, code_mun, agrifam_cadunico_2017), by = c("code_mun_short" = "code_mun")) %>% 
-  left_join(y = dplyr::select(IFDM_saude_2013_2022, code_mun, ifdm_saude_2017), by = c("code_mun_short" = "code_mun")) %>% 
-  left_join(y = dplyr::select(pessoas_cadunico_2012_2022, code_mun, pessoas_cadunico_2017), by = c("code_mun_short" = "code_mun")) %>% 
-  left_join(y = taxa_u5mort_2017, by = c("code_mun_short" = "code_mun")) %>% 
-  left_join(y = dplyr::select(cisternas, code_mun, cisternas_2017), by = c("code_mun_short" = "code_mun")) %>% 
-  mutate(cisternas_2017 = replace_na(cisternas_2017, 0)) %>% 
-  left_join(y = dplyr::select(irrigation_2010_2022, code_mun, irrigation_m3s_2017)) %>% 
-  left_join(y = domicilios_rural_brasil_2022) %>% 
-  left_join(y = pop_mun_2022) %>% 
-  mutate(area_m2 = st_area(geom),
-         area_ha = as.numeric(area_m2)/10000,
-         perc_agrifam_cadunico_2017 = (agrifam_cadunico_2017/domicilios_rural_2022)*100,
-         perc_pessoas_cadunico_2017 = (pessoas_cadunico_2017/pop_total_2022)*100,
-         perc_cisternas_2017 = (cisternas_2017/domicilios_rural_2022)*100,
-         irrigacao_hectare_2017 = irrigation_m3s_2017/area_ha) %>%
-  glimpse -> caat_mun_dados_2017
+# 
+# caat_mun_2017_5880 %>%
+#   dplyr::select(CD_GEOCMU) %>% 
+#   mutate(code_mun = as.factor(CD_GEOCMU), .keep = "unused") %>% 
+#   mutate(code_mun_short = code_mun %>%
+#            as.character() %>%
+#            str_sub(1, -2) %>%              
+#            factor()) %>% 
+#   left_join(y = dplyr::select(agrifam_cadunico_2012_2022, code_mun, agrifam_cadunico_2017), by = c("code_mun_short" = "code_mun")) %>% 
+#   left_join(y = dplyr::select(IFDM_saude_2013_2022, code_mun, ifdm_saude_2017), by = c("code_mun_short" = "code_mun")) %>% 
+#   left_join(y = dplyr::select(pessoas_cadunico_2012_2022, code_mun, pessoas_cadunico_2017), by = c("code_mun_short" = "code_mun")) %>% 
+#   left_join(y = taxa_u5mort_2017, by = c("code_mun_short" = "code_mun")) %>% 
+#   left_join(y = dplyr::select(cisternas, code_mun, cisternas_2017), by = c("code_mun_short" = "code_mun")) %>% 
+#   mutate(cisternas_2017 = replace_na(cisternas_2017, 0)) %>% 
+#   left_join(y = dplyr::select(irrigation_2010_2022, code_mun, irrigation_m3s_2017)) %>% 
+#   left_join(y = domicilios_rural_brasil_2022) %>% 
+#   left_join(y = pop_mun_2022) %>% 
+#   mutate(area_m2 = st_area(geom),
+#          area_ha = as.numeric(area_m2)/10000,
+#          perc_agrifam_cadunico_2017 = (agrifam_cadunico_2017/domicilios_rural_2022)*100,
+#          perc_pessoas_cadunico_2017 = (pessoas_cadunico_2017/pop_total_2022)*100,
+#          perc_cisternas_2017 = (cisternas_2017/domicilios_rural_2022)*100,
+#          irrigacao_hectare_2017 = irrigation_m3s_2017/area_ha) %>%
+#   glimpse -> caat_mun_dados_2017
 
 # write_sf(obj = caat_mun_dados_2017, dsn = "/Users/user/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap3/data/caat_mun_dados_2017.gpkg")
 
-##area weighted average
-aw_interpolate(.data = caat_mun_2022_5880,                # malha destino (2022)
-               tid = code_mun,                 # ID único da malha destino
-               source = caat_mun_dados_2017,               # malha de origem (2010)
-               sid = code_mun,                 # ID único da malha origem
-               weight = "sum",                  # tipo de agregação
-               output = "sf",               # retorna um objeto sf
-               intensive = c("perc_agrifam_cadunico_2017",
-                             "ifdm_saude_2017", "perc_pessoas_cadunico_2017",
-                             "taxa_u5mort_2017", "perc_cisternas_2017",
-                             "irrigacao_hectare_2017")                 # ou variáveis densidade
-) -> dados_mun_awa_2017
-
-dados_mun_awa_2017 %>% glimpse
+# ##area weighted average
+# aw_interpolate(.data = caat_mun_2022_5880,                # malha destino (2022)
+#                tid = code_mun,                 # ID único da malha destino
+#                source = caat_mun_dados_2017,               # malha de origem (2010)
+#                sid = code_mun,                 # ID único da malha origem
+#                weight = "sum",                  # tipo de agregação
+#                output = "sf",               # retorna um objeto sf
+#                intensive = c("perc_agrifam_cadunico_2017",
+#                              "ifdm_saude_2017", "perc_pessoas_cadunico_2017",
+#                              "taxa_u5mort_2017", "perc_cisternas_2017",
+#                              "irrigacao_hectare_2017")                 # ou variáveis densidade
+# ) -> dados_mun_awa_2017
+# 
+# dados_mun_awa_2017 %>% glimpse
 
 ###2022
+censobr::read_tracts(dataset = "Basico", year = 2022) -> basico_2022
+
+basico_2022 %>%
+  collect() %>%
+  dplyr::select(code_tract, code_muni, situacao, V0003) %>%
+  filter(situacao == "Rural") %>%
+  group_by(code_muni) %>%
+  reframe(domicilios_rural_2022 = sum(V0003)) %>%
+  mutate(code_mun = as.factor(code_muni), .keep = "unused") %>%
+  glimpse -> domicilios_rural_brasil_2022
+
 caat_mun_2022_5880 %>% 
   mutate(code_mun_short = code_mun %>%
            as.character() %>%
@@ -438,7 +445,6 @@ caat_mun_2022_5880 %>%
   left_join(y = pop_mun_2022) %>%
   left_join(y = dplyr::select(IFDM_saude_2013_2022, code_mun, ifdm_saude_2022), by = c("code_mun_short" = "code_mun")) %>%
   left_join(y = dplyr::select(pessoas_cadunico_2012_2022, code_mun, pessoas_cadunico_2022), by = c("code_mun_short" = "code_mun")) %>%
-  left_join(y = gini_municipal_2022) %>%
   left_join(y = taxa_u5mort_2022, by = c("code_mun_short" = "code_mun")) %>%
   left_join(y = dplyr::select(cisternas, code_mun, cisternas_2022), by = c("code_mun_short" = "code_mun")) %>%
   mutate(cisternas_2022 = replace_na(cisternas_2022, 0)) %>%
@@ -446,19 +452,24 @@ caat_mun_2022_5880 %>%
   left_join(y = dplyr::select(esgoto_censo_2022, code_mun, perc_saneamento_2022)) %>%
   left_join(y = dplyr::select(iluminacao, code_mun, perc_public_light_2022)) %>%
   left_join(y = domicilios_rural_brasil_2022) %>%
+  left_join(y = mun_respRenda_2022, by = "code_mun") %>% 
+  left_join(y = select(tab_gado, code_mun, bovino_2022, caprino_2022), by = "code_mun") %>% 
+  left_join(y = select(pib_agro, code_mun, perc_pib_agro_2021)) %>% 
   mutate(area_m2 = st_area(geometry),
          area_ha = as.numeric(area_m2)/10000,
          perc_agrifam_cadunico_2022 = (agrifam_cadunico_2022/domicilios_rural_2022)*100,
          perc_pessoas_cadunico_2022 = (pessoas_cadunico_2022/pop_total_2022)*100,
          perc_cisternas_2022 = (cisternas_2022/domicilios_rural_2022)*100,
-         irrigacao_hectare_2022 = irrigation_m3s_2022/area_ha
+         irrigacao_hectare_2022 = irrigation_m3s_2022/area_ha,
+         bovino_hectare_2022 = bovino_2022/area_ha,
+         caprino_hectare_2022 = caprino_2022/area_ha
          ) %>%
   glimpse -> caat_mun_dados_2022
 
 ##Escala de paisagem----
 tabela_buffer%>% 
   left_join(y = dados_mun_awa_2010, by = "code_mun") %>% 
-  left_join(y = dados_mun_awa_2017, by = c("code_mun", "geometry")) %>% 
+  # left_join(y = dados_mun_awa_2017, by = c("code_mun", "geometry")) %>% 
   left_join(y = caat_mun_dados_2022, by = c("code_mun", "geometry")) %>% 
   mutate(code_state = str_sub(as.character(code_mun), 1,2),
          code_state = as.factor(code_state)) %>% 
@@ -497,9 +508,9 @@ df_mean %>%
 
 df_wide %>% 
   left_join(y = dados_mun_awa_2010, by = "code_mun") %>% 
-  left_join(y = dados_mun_awa_2017, by = c("code_mun", "geometry")) %>% 
+  # left_join(y = dados_mun_awa_2017, by = c("code_mun", "geometry")) %>% 
   left_join(y = caat_mun_dados_2022, by = c("code_mun", "geometry")) %>% 
-  select(-starts_with("sum_perc_"), -ends_with("2017"), -ends_with("2018"), - Gini, -code_short) %>%  #remover as colunas que não fazem sentido
+  select(-starts_with("sum_perc_"), -ends_with("2017"), -ends_with("2018"), -code_short) %>%  #remover as colunas que não fazem sentido
   glimpse -> tab_mun_nova
 
 # writexl::write_xlsx(x = tab_mun_nova, path = "data/tabela_mun_nova.xlsx")

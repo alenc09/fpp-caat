@@ -20,6 +20,7 @@ basico_2022 %>%
   glimpse -> domicilios_rural_brasil_2022
 
 data_dictionary(year = 2010, dataset = "tracts")
+data_dictionary(year = 2022, dataset = "tracts")
 
 censobr::read_tracts(dataset = "Entorno", year = 2022) -> entorno_2022
 
@@ -53,3 +54,5 @@ write_sf(obj = sc_caat_rural_2022, dsn = "/Users/user/Library/CloudStorage/OneDr
 geobr::read_state(code_state = "all", year = 2020, simplified = F) -> br_states
 
 write_sf(obj = br_states, dsn = "/Users/user/Library/CloudStorage/OneDrive-TheUniversityofManchester/SFT/Data/Brazil/raw/gis/br_states.gpkg")
+
+censobr::rea
