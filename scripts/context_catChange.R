@@ -32,6 +32,10 @@ tab_mun_analysis %>%
   # filter(cat_change != "stable") %>% 
   glimpse -> tab_mun_models
 
+poly2nb(tab_mun_analysis$geom, 
+        queen=TRUE) -> mat_dist_mun_caat
+
+nb2listw(mat_dist_mun_caat) -> mat_dist_list_mun_caat
 
 #Analysis----
 ##multinomial----
@@ -74,22 +78,16 @@ summary(mod_glm_fpp)
 lm.morantest(model = mod_glm_fpp, listw = mat_dist_list_mun_caat)
 
 ##spatial----
-poly2nb(tab_mun_analysis$geom, 
-        queen=TRUE) -> mat_dist_mun_caat
-
-nb2listw(mat_dist_mun_caat) -> mat_dist_list_mun_caat
-
-
 ##forest
 mean_forest_perc_change ~ change_agrifam_cadunico + change_popUrb + change_ifdm_saude +
   change_mean_respRenda + change_taxa_u5mort + change_cisternas +
-  change_irrigation + change_saneamento + change_public_light +
+  change_irrigation + change_public_light +
   change_bovino_hectare + change_caprino_hectare + change_pib_agro -> form_forest
 
 errorsarlm(formula = form_forest,
            data    = tab_mun_models,
            listw   = mat_dist_list_mun_caat,
-           Durbin  = TRUE,       # isso ativa o "Durbin" (variáveis explicativas defasadas)
+           Durbin  = TRUE,       
            zero.policy = TRUE) -> mod_spatial_forest
 
 impacts(mod_spatial_forest, listw = mat_dist_list_mun_caat, R = 1000) -> imp_mod_spatial_forest 
@@ -98,7 +96,7 @@ summary(imp_mod_spatial_forest, short = T)
 ##fpp
 mean_fpp_perc_change ~ change_agrifam_cadunico + change_popUrb + change_ifdm_saude +
   change_mean_respRenda + change_taxa_u5mort + change_cisternas +
-  change_irrigation + change_saneamento + change_public_light +
+  change_irrigation + change_public_light +
   change_bovino_hectare + change_caprino_hectare + change_pib_agro -> form_fpp
 
 errorsarlm(formula = form_fpp,
@@ -161,3 +159,18 @@ summary(imp_mod_spatial_fpp)
 #            zero.policy = TRUE) -> mod_spatial_abs_forest
 # 
 # summary(mod_spatial_abs_forest)
+
+##forest robustness check
+change_mean_perc_forest ~ change_agrifam_cadunico + change_popUrb + change_ifdm_saude +
+  change_mean_respRenda + change_taxa_u5mort + change_cisternas +
+  change_irrigation + change_public_light +
+  change_bovino_hectare + change_caprino_hectare + change_pib_agro -> form_forest_23
+
+errorsarlm(formula = form_forest_23,
+           data    = tab_mun_models,
+           listw   = mat_dist_list_mun_caat,
+           Durbin  = TRUE,       
+           zero.policy = TRUE) -> mod_spatial_forest_23
+
+impacts(mod_spatial_forest_23, listw = mat_dist_list_mun_caat, R = 1000) -> imp_mod_spatial_forest_23 
+summary(imp_mod_spatial_forest_23, short = T)
