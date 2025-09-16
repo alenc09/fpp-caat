@@ -56,7 +56,7 @@ glm(data = tab_mun_models,
       change_bovino_hectare + change_caprino_hectare + change_pib_agro) -> mod_glm_forest
 
 car:::vif(mod_glm_forest)
-plot(mod_glm_forest)
+# plot(mod_glm_forest)
 summary(mod_glm_forest)
 lm.morantest(model = mod_glm_forest, listw = mat_dist_list_mun_caat)
 
@@ -73,7 +73,7 @@ glm(data = tab_mun_models,
       change_bovino_hectare + change_caprino_hectare + change_pib_agro) -> mod_glm_fpp
 
 car:::vif(mod_glm_fpp)
-plot(mod_glm_fpp)
+# plot(mod_glm_fpp)
 summary(mod_glm_fpp)
 lm.morantest(model = mod_glm_fpp, listw = mat_dist_list_mun_caat)
 
