@@ -481,7 +481,6 @@ tabela_buffer%>%
 # st_write(obj = tabela_buffer_nova, dsn = "/Users/user/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap3/data/tabela_buffer_nova.gpkg", append=F)
 
 ##Escala de município----
-# 1) Deixa no formato long
 df_long <- tabela_buffer %>% 
   filter(perc_forest_2022 >= 20) %>% 
   pivot_longer(
@@ -490,7 +489,6 @@ df_long <- tabela_buffer %>%
     names_pattern = "(.*)_(\\d+)"
   )
 
-# 2) Média simples por município, ano e variável
 df_mean <- df_long %>%
   group_by(code_mun, year, var) %>%
   summarise(sum = sum(value),
@@ -498,7 +496,6 @@ df_mean <- df_long %>%
             sd = sd(value, na.rm = T),
             .groups = "drop")
 
-# 3) Volta para formato wide
 df_mean %>%
   pivot_wider(
     names_from = c(var, year),
@@ -515,3 +512,36 @@ df_wide %>%
 
 # writexl::write_xlsx(x = tab_mun_nova, path = "data/tabela_mun_nova.xlsx")
 # write_sf(obj = tab_mun_nova, dsn = "/Users/user/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap3/data/tab_mun_nova.gpkg")
+
+##Robustness check - Only landscapes with 50% or 70% forest cover
+df_long <- tabela_buffer %>% 
+  filter(perc_forest_2022 >= 70) %>% # changed to test the 50% and 70% thresholds
+  pivot_longer(
+    cols = matches("perc_forest_\\d+|fpp_\\d+"),
+    names_to = c("var", "year"),
+    names_pattern = "(.*)_(\\d+)"
+  )
+
+df_mean <- df_long %>%
+  group_by(code_mun, year, var) %>%
+  summarise(sum = sum(value),
+            mean = mean(value, na.rm = TRUE),
+            sd = sd(value, na.rm = T),
+            .groups = "drop")
+
+df_mean %>%
+  pivot_wider(
+    names_from = c(var, year),
+    values_from = c(sum, mean, sd),
+    names_sep = "_"
+  ) -> df_wide
+
+df_wide %>% 
+  left_join(y = dados_mun_awa_2010, by = "code_mun") %>% 
+  # left_join(y = dados_mun_awa_2017, by = c("code_mun", "geometry")) %>% 
+  left_join(y = caat_mun_dados_2022, by = c("code_mun", "geometry")) %>% 
+  select(-starts_with("sum_perc_"), -ends_with("2017"), -ends_with("2018"), -code_short) %>%  #remover as colunas que não fazem sentido
+  glimpse -> tab_mun_nova
+
+# writexl::write_xlsx(x = tab_mun_nova, path = "data/tabela_mun_70.xlsx")
+# write_sf(obj = tab_mun_nova, dsn = "/Users/user/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap3/data/tab_mun_70.gpkg")

@@ -8,6 +8,10 @@ library(nnet)
 library(spdep)
 library(spatialreg)
 library(ggplot2)
+library(purrr)
+library(tibble)
+library(officer)
+library(flextable)
 
 #data----
 read_sf("/Users/user/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap3/data/tab_mun_analysis.gpkg", stringsAsFactors = T) -> tab_mun_analysis
@@ -50,7 +54,7 @@ nb2listw(mat_dist_mun_caat) -> mat_dist_list_mun_caat
 ##linear----
 ###forest
 glm(data = tab_mun_models,
-    mean_forest_perc_change ~ change_agrifam_cadunico + change_popUrb + change_ifdm_saude +
+    mean_forest_perc_change ~ change_popUrb + change_ifdm_saude +
       change_mean_respRenda + change_taxa_u5mort + change_cisternas +
       change_irrigation + change_saneamento + change_public_light +
       change_bovino_hectare + change_caprino_hectare + change_pib_agro) -> mod_glm_forest
@@ -60,14 +64,10 @@ car:::vif(mod_glm_forest)
 summary(mod_glm_forest)
 lm.morantest(model = mod_glm_forest, listw = mat_dist_list_mun_caat)
 
-ggplot2::ggplot(data = tab_mun_models) +
-  geom_point(aes(x = change_cisternas, y = mean_forest_perc_change)) +
-  geom_smooth(aes(x = change_cisternas, y = mean_forest_perc_change), stat = "smooth")
-
 
 ###fpp
 glm(data = tab_mun_models,
-    mean_fpp_perc_change ~ change_agrifam_cadunico + change_popUrb + change_ifdm_saude +
+    mean_fpp_perc_change ~ change_popUrb + change_ifdm_saude +
       change_mean_respRenda + change_taxa_u5mort + change_cisternas +
       change_irrigation + change_saneamento + change_public_light +
       change_bovino_hectare + change_caprino_hectare + change_pib_agro) -> mod_glm_fpp
@@ -79,7 +79,7 @@ lm.morantest(model = mod_glm_fpp, listw = mat_dist_list_mun_caat)
 
 ##spatial----
 ##forest
-mean_forest_perc_change ~ change_agrifam_cadunico + change_popUrb + change_ifdm_saude +
+mean_forest_perc_change ~ change_popUrb + change_ifdm_saude +
   change_mean_respRenda + change_taxa_u5mort + change_cisternas +
   change_irrigation + change_public_light +
   change_bovino_hectare + change_caprino_hectare + change_pib_agro -> form_forest
@@ -91,10 +91,73 @@ errorsarlm(formula = form_forest,
            zero.policy = TRUE) -> mod_spatial_forest
 
 impacts(mod_spatial_forest, listw = mat_dist_list_mun_caat, R = 1000) -> imp_mod_spatial_forest 
-summary(imp_mod_spatial_forest, short = T)
+summary(imp_mod_spatial_forest, short = T) -> summary_imp_forest
 
-##fpp
-mean_fpp_perc_change ~ change_agrifam_cadunico + change_popUrb + change_ifdm_saude +
+
+df_impacts <- tibble(
+  variable = names(summary_imp_forest$impacts$direct),
+  direct   = sprintf("%.4f (%.4f), p=%.4f",
+                     summary_imp_forest$impacts$direct,
+                     summary_imp_forest$se$direct,
+                     summary_imp_forest$pzmat[,1]),
+  indirect = sprintf("%.4f (%.4f), p=%.4f",
+                     summary_imp_forest$impacts$indirect,
+                     summary_imp_forest$se$indirect,
+                     summary_imp_forest$pzmat[,2]),
+  total    = sprintf("%.4f (%.4f), p=%.4f",
+                     summary_imp_forest$impacts$total,
+                     summary_imp_forest$se$total,
+                     summary_imp_forest$pzmat[,3])
+)
+# Transformar em flextable para exportar pro Word
+ft <- flextable(df_impacts)
+
+# Exportar para .docx editável
+doc <- read_docx() %>%
+  body_add_flextable(ft)
+
+print(doc, target = "impacts_results.docx")
+
+#model diagnosis
+extract_model_fit <- function(spatial_model, ols_model) {
+  # LogLik, AIC e BIC do modelo espacial
+  ll_spatial <- as.numeric(logLik(spatial_model))
+  aic_spatial <- AIC(spatial_model)
+  bic_spatial <- BIC(spatial_model)
+  
+  # R² baseado na variância explicada (pseudo R²)
+  pseudoR2 <- 1 - (sum(residuals(spatial_model)^2) / sum((spatial_model$y - mean(spatial_model$y))^2))
+  
+  # OLS para comparação
+  ll_ols <- as.numeric(logLik(ols_model))
+  aic_ols <- AIC(ols_model)
+  bic_ols <- BIC(ols_model)
+  r2_ols <- summary(ols_model)$r.squared
+  
+  tibble(
+    Model      = c("Spatial", "OLS"),
+    LogLik     = c(ll_spatial, ll_ols),
+    AIC        = c(aic_spatial, aic_ols),
+    BIC        = c(bic_spatial, bic_ols),
+    R2_Pseudo  = c(pseudoR2, r2_ols)
+  )
+}
+
+fit_stats <- extract_model_fit(mod_spatial_forest, mod_glm_forest)
+
+print(fit_stats)
+
+ft <- flextable(fit_stats) %>%
+  autofit()
+
+# Exportar para Word
+doc <- read_docx() %>%
+  body_add_flextable(ft)
+
+print(doc, target = "model_fit_comparison.docx")
+
+##fpp----
+mean_fpp_perc_change ~ change_popUrb + change_ifdm_saude +
   change_mean_respRenda + change_taxa_u5mort + change_cisternas +
   change_irrigation + change_public_light +
   change_bovino_hectare + change_caprino_hectare + change_pib_agro -> form_fpp
@@ -106,8 +169,44 @@ errorsarlm(formula = form_fpp,
            zero.policy = TRUE) -> mod_spatial_fpp
 
 impacts(mod_spatial_fpp, listw = mat_dist_list_mun_caat, R = 1000) -> imp_mod_spatial_fpp
-summary(imp_mod_spatial_fpp)
+summary(imp_mod_spatial_fpp) -> summary_imp_fpp
 
+df_impacts <- tibble(
+  variable = names(summary_imp_fpp$impacts$direct),
+  direct   = sprintf("%.4f (%.4f), p=%.4f",
+                     summary_imp_fpp$impacts$direct,
+                     summary_imp_fpp$se$direct,
+                     summary_imp_fpp$pzmat[,1]),
+  indirect = sprintf("%.4f (%.4f), p=%.4f",
+                     summary_imp_fpp$impacts$indirect,
+                     summary_imp_fpp$se$indirect,
+                     summary_imp_fpp$pzmat[,2]),
+  total    = sprintf("%.4f (%.4f), p=%.4f",
+                     summary_imp_fpp$impacts$total,
+                     summary_imp_fpp$se$total,
+                     summary_imp_fpp$pzmat[,3])
+)
+# Transformar em flextable para exportar pro Word
+ft <- flextable(df_impacts)
+
+# Exportar para .docx editável
+doc <- read_docx() %>%
+  body_add_flextable(ft)
+
+print(doc, target = "impacts_results.docx")
+
+fit_stats <- extract_model_fit(mod_spatial_fpp, mod_glm_fpp)
+
+print(fit_stats)
+
+ft <- flextable(fit_stats) %>%
+  autofit()
+
+# Exportar para Word
+doc <- read_docx() %>%
+  body_add_flextable(ft)
+
+print(doc, target = "model_fit_comparison.docx")
 
 ##valor bruto----
 # glm(data = tab_mun_analysis,
@@ -174,3 +273,4 @@ errorsarlm(formula = form_forest_23,
 
 impacts(mod_spatial_forest_23, listw = mat_dist_list_mun_caat, R = 1000) -> imp_mod_spatial_forest_23 
 summary(imp_mod_spatial_forest_23, short = T)
+
