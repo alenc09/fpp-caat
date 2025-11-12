@@ -4,6 +4,7 @@
 #data----
 read_sf("/Users/user/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap3/data/tabela_buffer_nova.gpkg") -> tab_buffer
 read_sf("/Users/user/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap3/data/tab_mun_nova.gpkg") -> tab_mun
+read_sf("/Users/user/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap3/data/tab_mun_10.gpkg") -> tab_mun_10
 read_sf("/Users/user/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap3/data/tab_mun_50.gpkg") -> tab_mun_50
 read_sf("/Users/user/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap3/data/tab_mun_70.gpkg") -> tab_mun_70
 
@@ -66,7 +67,63 @@ tab_mun %>%
 
 # write_sf(obj = tab_mun_analysis, dsn = "/Users/user/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap3/data/tab_mun_analysis.gpkg")
 
-##tabela escala municipal 50% and 70% threshold----
+##tabela escala municipal 10%, 50% and 70% threshold----
+tab_mun_10 %>% 
+  mutate(mean_fpp_abs_change = mean_fpp_2022 - mean_fpp_2010,
+         mean_fpp_perc_change = ((mean_fpp_2022 - mean_fpp_2010)/mean_fpp_2010)*100,
+         mean_forest_abs_change = mean_perc_forest_2022 - mean_perc_forest_2010,
+         mean_forest_perc_change = ((mean_perc_forest_2022 - mean_perc_forest_2010)/mean_perc_forest_2010)*100) %>% 
+  select(code_mun, code_mun_short, starts_with("sum"), starts_with("mean"), starts_with("fpp"),
+         starts_with("ifdm"), starts_with("perc"), starts_with("taxa"), contains("hectare")) %>%
+  mutate(across(.cols = where(is.character), .fns = as.factor)) %>% 
+  mutate(cat_change = if_else(
+    condition = mean_forest_perc_change > 0 & mean_fpp_perc_change > 0,
+    true = "GG",
+    false = if_else(
+      condition = mean_forest_perc_change > 0 & mean_fpp_perc_change < 0,
+      true = "GP",
+      false = if_else(
+        condition =  mean_forest_perc_change < 0 & mean_fpp_perc_change > 0,
+        true = "PG",
+        false = if_else(
+          mean_forest_perc_change < 0 & mean_fpp_perc_change < 0,
+          true = "PP",
+          false = "stable"
+        )
+      )
+    )
+  )
+  ) %>% 
+  glimpse -> tab_mun_analysis_10
+
+tab_mun_50 %>% 
+  mutate(mean_fpp_abs_change = mean_fpp_2022 - mean_fpp_2010,
+         mean_fpp_perc_change = ((mean_fpp_2022 - mean_fpp_2010)/mean_fpp_2010)*100,
+         mean_forest_abs_change = mean_perc_forest_2022 - mean_perc_forest_2010,
+         mean_forest_perc_change = ((mean_perc_forest_2022 - mean_perc_forest_2010)/mean_perc_forest_2010)*100) %>% 
+  select(code_mun, code_mun_short, starts_with("sum"), starts_with("mean"), starts_with("fpp"),
+         starts_with("ifdm"), starts_with("perc"), starts_with("taxa"), contains("hectare")) %>%
+  mutate(across(.cols = where(is.character), .fns = as.factor)) %>% 
+  mutate(cat_change = if_else(
+    condition = mean_forest_perc_change > 0 & mean_fpp_perc_change > 0,
+    true = "GG",
+    false = if_else(
+      condition = mean_forest_perc_change > 0 & mean_fpp_perc_change < 0,
+      true = "GP",
+      false = if_else(
+        condition =  mean_forest_perc_change < 0 & mean_fpp_perc_change > 0,
+        true = "PG",
+        false = if_else(
+          mean_forest_perc_change < 0 & mean_fpp_perc_change < 0,
+          true = "PP",
+          false = "stable"
+        )
+      )
+    )
+  )
+  ) %>% 
+  glimpse -> tab_mun_analysis_50
+
 tab_mun_70 %>% 
   mutate(mean_fpp_abs_change = mean_fpp_2022 - mean_fpp_2010,
          mean_fpp_perc_change = ((mean_fpp_2022 - mean_fpp_2010)/mean_fpp_2010)*100,
@@ -93,6 +150,8 @@ tab_mun_70 %>%
     )
   )
   ) %>% 
-  glimpse -> tab_mun_analysis
+  glimpse -> tab_mun_analysis_70
 
-# write_sf(obj = tab_mun_analysis, dsn = "/Users/user/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap3/data/tab_mun_analysis_70.gpkg")
+write_sf(obj = tab_mun_analysis_10, dsn = "/Users/user/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap3/data/tab_mun_analysis_10.gpkg")
+write_sf(obj = tab_mun_analysis_50, dsn = "/Users/user/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap3/data/tab_mun_analysis_50.gpkg")
+write_sf(obj = tab_mun_analysis_70, dsn = "/Users/user/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap3/data/tab_mun_analysis_70.gpkg")

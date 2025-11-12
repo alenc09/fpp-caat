@@ -116,7 +116,7 @@ ft <- flextable(df_impacts)
 doc <- read_docx() %>%
   body_add_flextable(ft)
 
-print(doc, target = "impacts_results.docx")
+print(doc, target = "impacts_results_20.docx")
 
 #model diagnosis
 extract_model_fit <- function(spatial_model, ols_model) {

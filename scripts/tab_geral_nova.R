@@ -515,7 +515,7 @@ df_wide %>%
 
 ##Robustness check - Only landscapes with 50% or 70% forest cover
 df_long <- tabela_buffer %>% 
-  filter(perc_forest_2022 >= 70) %>% # changed to test the 50% and 70% thresholds
+  filter(perc_forest_2022 >= 50) %>% # changed to test the 10%, 50% and 70% thresholds
   pivot_longer(
     cols = matches("perc_forest_\\d+|fpp_\\d+"),
     names_to = c("var", "year"),
@@ -541,7 +541,7 @@ df_wide %>%
   # left_join(y = dados_mun_awa_2017, by = c("code_mun", "geometry")) %>% 
   left_join(y = caat_mun_dados_2022, by = c("code_mun", "geometry")) %>% 
   select(-starts_with("sum_perc_"), -ends_with("2017"), -ends_with("2018"), -code_short) %>%  #remover as colunas que não fazem sentido
-  glimpse -> tab_mun_nova
+  glimpse -> tab_mun_nova_50
 
 # writexl::write_xlsx(x = tab_mun_nova, path = "data/tabela_mun_70.xlsx")
-# write_sf(obj = tab_mun_nova, dsn = "/Users/user/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap3/data/tab_mun_70.gpkg")
+write_sf(obj = tab_mun_nova_50, dsn = "/Users/user/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap3/data/tab_mun_50.gpkg")
