@@ -46,7 +46,8 @@ nb2listw(mat_dist_mun_caat_70,
 ##forest
 mean_forest_perc_change ~ change_popUrb + change_ifdm_saude +
   change_mean_respRenda + change_taxa_u5mort + change_cisternas +
- change_public_light +
+  # change_irrigation + 
+  change_public_light +
   change_bovino_hectare + change_caprino_hectare + change_pib_agro -> form_forest
 
 errorsarlm(formula = form_forest,
@@ -87,7 +88,9 @@ print(doc, target = "impacts_results_70.docx")
 ################################################################################
 ##fpp----
 mean_fpp_perc_change ~ change_popUrb + change_ifdm_saude +
-  change_mean_respRenda + change_taxa_u5mort + change_cisternas + change_public_light +
+  change_mean_respRenda + change_taxa_u5mort + change_cisternas + 
+  # change_irrigation + 
+  change_public_light +
   change_bovino_hectare + change_caprino_hectare + change_pib_agro -> form_fpp
 
 errorsarlm(formula = form_fpp,
