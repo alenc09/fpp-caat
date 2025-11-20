@@ -55,7 +55,7 @@ ggplot() +
     breaks = c(-75, -50, -25, -12.5, 0, 12.5, 25, 50, 75),
     name = "FPP change (%)",
     na.value = "grey90")+
-  geom_sf(data = states_caat, fill="transparent", linewidth=0.3) +
+  geom_sf(data = states_caat, fill="transparent", linewidth=0.2) +
   coord_sf(
     xlim = c(bbox["xmin"] - 70000, bbox["xmax"] + 100000), 
     ylim = c(bbox["ymin"] - 30000, bbox["ymax"] + 1000), 

@@ -72,14 +72,14 @@ tab_buff_analysis %>%
   ylim(-100, 200) +
   geom_hline(yintercept = 0) +
   geom_vline(xintercept = 0) +
-  annotate(geom = "text", label = "n = 628", x = 60, y = 150, color = "#018571", fontface = "bold")+
-  annotate(geom = "text", label = "n = 1853", x = 60, y = -80, color = "#80cdc1", fontface = "bold")+
-  annotate(geom = "text", label = "n = 1144", x = -60, y = 150, color = "#dfc27d", fontface = "bold")+
-  annotate(geom = "text", label = "n = 3605", x = -60, y = -80, color = "#a6611a", fontface = "bold")+
+  annotate(geom = "text", label = "n = 628", x = 60, y = 150, color = "#018571", fontface = "bold", size = 2)+
+  annotate(geom = "text", label = "n = 1853", x = 60, y = -80, color = "#80cdc1", fontface = "bold", size = 2)+
+  annotate(geom = "text", label = "n = 1144", x = -60, y = 150, color = "#dfc27d", fontface = "bold", size = 2)+
+  annotate(geom = "text", label = "n = 3605", x = -60, y = -80, color = "#a6611a", fontface = "bold", size = 2)+
   xlab("Change in forest cover (%)") +
   ylab("Change in FPP (%)") +
   scale_color_manual(values = c("#018571", "#80cdc1", "#dfc27d", "#a6611a"))+
-  theme_classic()+
+  theme_classic(base_size = 10)+
   theme(legend.position = "none",
         panel.background = element_rect(color = "white")) -> fpp_forest_all
 
@@ -118,17 +118,21 @@ ggplot(tab_mun_analysis) +
     ylim = c(bbox["ymin"] - 30000, bbox["ymax"] + 1000),
     expand = F) +
   geom_sf_text(data = coords_estados_sf, aes(label = sigla),
-               size = 3) +
+               size = 2) +
   theme_map()+
-  theme(legend.text = element_text(size = 10),
-        legend.title = element_text(size = 11),
-        legend.position = c(0.8, 0.2)) -> map_forest_fpp
+  theme(legend.text = element_text(size = 5),
+        legend.title = element_text(size = 6),
+        legend.position = c(0.9, 0.15)) -> map_forest_fpp
 
 #Figure 3----
 fpp_forest_all + map_forest_fpp +
   plot_layout(widths = c(0.8, 1)) +
-  plot_annotation(tag_levels = "a") -> fig_3
+  plot_annotation() -> fig_3 #, theme = theme(plot.tag = element_text(size = 12))) 
 
-ggsave(plot = fig_3, filename = "/Users/user/Library/CloudStorage/OneDrive-TheUniversityofManchester/outros_trampos/Manuscritos/FPP_caat/manuscript/PNAS/PNAS_lucas_resubmissao/Fig_3.jpg",
-       width = 10,
-       height = 5)
+
+ggsave(plot = fig_3, filename = "/Users/user/Library/CloudStorage/OneDrive-TheUniversityofManchester/outros_trampos/Manuscritos/FPP_caat/manuscript/PNAS/PNAS_lucas_resubmissao/Fig_3.tiff",
+       units = "in",
+       device = "tiff",
+       dpi = 600,
+       width = 6,
+       height = 3)
