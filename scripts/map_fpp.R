@@ -5,12 +5,9 @@
 library(sf)
 library(ggplot2)
 library(cowplot)
-
 library(geobr)
 library(dplyr)
-
-
-
+library(patchwork)
 
 #data----
 read_sf("/Users/user/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap3/data/tab_mun_analysis.gpkg") -> tab_mun_analysis
@@ -50,7 +47,7 @@ bbox <- st_bbox(mun_caat)
 
 tab_mun_analysis %>% 
 ggplot() +
-  geom_sf(data = mun_caat, aes(geometry = geom, fill = code_muni), fill = "grey90", color = "grey", linewidth = 0.2) +
+  geom_sf(data = mun_caat, aes(geometry = geom, fill = code_muni), fill = "grey90", color = "grey", linewidth = 0.05) +
   geom_sf(aes(geometry = geom, fill = mean_fpp_perc_change), linewidth = 0.2, color = "grey") +
   scale_fill_fermenter(
     palette = "BrBG",
@@ -64,37 +61,37 @@ ggplot() +
     ylim = c(bbox["ymin"] - 30000, bbox["ymax"] + 1000), 
     expand = F) +
   geom_sf_text(data = coords_estados_sf, aes(label = sigla),
-            size = 3) +
+            size = 2) +
   theme_map()+
-  theme(legend.text = element_text(size = 10),
-        legend.title = element_text(size = 11),
-        legend.position = c(0.9, 0.2),
-        legend.key.height = unit(0.8, "cm")) -> map_fpp_change
+  theme(legend.text = element_text(size = 5),
+        legend.title = element_text(size = 6),
+        legend.position.inside = c(0.6, 0.2),
+        legend.key.height = unit(0.5, "cm")) -> map_fpp_change
 
 ##map lisa----
-source(here("scripts/LISA.R"))
+# source(here("scripts/LISA.R"))
 
 ###lisa classic
-ggplot(tab_mun_analysis) +
-  geom_sf(data = mun_caat, aes(geometry = geom, fill = "code_muni"), fill = "grey90", color = "grey", linewidth = 0.2) +
-  geom_sf(aes(fill = cluster_type), linewidth = 0.1, color = "grey") +
-  scale_fill_manual(values = c("High-High" = "#018571",
-                               "High-Low" = "#80cdc1",
-                               "Low-High" = "#dfc27d",
-                               "Low-Low" = "#a6611a",
-                               "Not significant" = "grey70"),
-                    name = "Clusters of\n FPP change") +
-  geom_sf(data = states_caat, fill="transparent", linewidth=0.3) +
-  coord_sf(
-    xlim = c(bbox["xmin"] - 70000, bbox["xmax"] + 100000), 
-    ylim = c(bbox["ymin"] - 30000, bbox["ymax"] + 1000), 
-    expand = F) +
-  geom_sf_text(data = coords_estados_sf, aes(label = sigla),
-               size = 3) +
-  theme_map()+
-  theme(legend.text = element_text(size = 10),
-        legend.title = element_text(size = 11),
-        legend.position = c(0.8, 0.2)) -> map_lisa_classic
+# ggplot(tab_mun_analysis) +
+#   geom_sf(data = mun_caat, aes(geometry = geom, fill = "code_muni"), fill = "grey90", color = "grey", linewidth = 0.2) +
+#   geom_sf(aes(fill = cluster_type), linewidth = 0.1, color = "grey") +
+#   scale_fill_manual(values = c("High-High" = "#018571",
+#                                "High-Low" = "#80cdc1",
+#                                "Low-High" = "#dfc27d",
+#                                "Low-Low" = "#a6611a",
+#                                "Not significant" = "grey70"),
+#                     name = "Clusters of\n FPP change") +
+#   geom_sf(data = states_caat, fill="transparent", linewidth=0.3) +
+#   coord_sf(
+#     xlim = c(bbox["xmin"] - 70000, bbox["xmax"] + 100000), 
+#     ylim = c(bbox["ymin"] - 30000, bbox["ymax"] + 1000), 
+#     expand = F) +
+#   geom_sf_text(data = coords_estados_sf, aes(label = sigla),
+#                size = 3) +
+#   theme_map()+
+#   theme(legend.text = element_text(size = 10),
+#         legend.title = element_text(size = 11),
+#         legend.position = c(0.8, 0.2)) -> map_lisa_classic
 
 ###lisa mean = 0
 # ggplot(tab_mun_analysis) +
@@ -128,14 +125,13 @@ ggplot()+
 ggdraw()+
   draw_plot(map_fpp_change)+
   draw_plot(inset_map,
-            x = 0.01, y = 0.65, width = 0.40, height = 0.40)-> map_fpp_change_inset
+            x = 0.01, y = 0.7, width = 0.30, height = 0.30)-> map_fpp_change_inset
 
-plot_grid(map_fpp_change_inset,
-          map_lisa_classic,
-          labels = "auto") -> fpp_change_map
+ggsave(plot = map_fpp_change_inset, filename = "/Users/user/Library/CloudStorage/OneDrive-TheUniversityofManchester/outros_trampos/Manuscritos/FPP_caat/manuscript/PNAS/PNAS_lucas_resubmissao/Fig_2.tiff",
+       units = "in",
+       device = "tiff",
+       dpi = 600,
+       width = 3.42,
+       height = 3.42,
+       bg = "white")
 
-# ggsave(plot = fpp_change_map, filename = "/Users/user/Library/CloudStorage/OneDrive-TheUniversityofManchester/outros_trampos/Manuscritos/FPP_caat/manuscript/PNAS/PNAS_lucas_resubmissao/Fig_2.jpg",
-#        dpi = 300,
-#        bg = "white",
-#        width = 10,
-#        height = 5)

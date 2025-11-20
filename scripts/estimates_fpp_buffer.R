@@ -8,9 +8,11 @@ library(dplyr)
 library(stringr)
 library(purrr)
 library(tibble)
+library(tidyr)
 library(ggplot2)
 library(scales)
 library(patchwork)
+library(ragg)
 
 #data----
 # read.csv(file = here("data/tabela_geral.csv"))-> tab_geral
@@ -141,25 +143,25 @@ results_bioma_10 %>%
 ##FPP varying thresholds
 ggplot(results_bioma, aes(x = threshold, y = pop_est, color = factor(year))) +
   annotate("segment", x = 0, xend = 20, y = 7034206, yend = 7034206, linetype = "dashed", color = "lightgrey") +
-  annotate("text", label = "7.0", x = 2.5, y = 7200000, color = "grey60")+
+  annotate("text", label = "7.0", x = 3, y = 7300000, color = "grey60", size = 2)+
   annotate("segment", x = 20, xend = 20, y = 0, yend = 7034206, linetype = "dashed", color = "lightgrey") +
   annotate("segment", x = 0, xend = 50, y = 4394562, yend = 4394562, linetype = "dashed", color = "lightgrey") +
-  annotate("text", label = "4.4", x = 2.5, y = 4550000, color = "grey60")+
+  annotate("text", label = "4.4", x = 3, y = 4650000, color = "grey60", size = 2)+
   annotate("segment", x = 50, xend = 50, y = 0, yend = 4394562, linetype = "dashed", color = "lightgrey") +
   annotate("segment", x = 0, xend = 70, y = 2608132, yend = 2608132, linetype = "dashed", color = "lightgrey") +
   annotate("segment", x = 70, xend = 70, y = 0, yend = 2608132, linetype = "dashed", color = "lightgrey") + 
-  annotate("text", label = "2.6", x = 2.5, y = 2780000, color = "grey60")+
+  annotate("text", label = "2.6", x = 3, y = 2880000, color = "grey60", size = 2)+
   geom_line(size = 1.2) +
   geom_point(size = 2) +
-  scale_x_continuous(breaks = seq(10, 100, 10), expand = c(0, 0), limits = c(0, NA)) +
-  scale_y_continuous(labels = label_number(scale = 1e-6), expand = c(0, 100000), limits = c(0, NA)) +
+  scale_x_continuous(breaks = seq(10, 100, 10), expand = c(0, 0), limits = c(0, 105)) +
+  scale_y_continuous(labels = label_number(scale = 1e-6), expand = c(0, 100000), limits = c(0, max(results_bioma$pop_est) * 1.05)) +
   labs(
     x = "Forest cover threshold (%)",
     y = "Number of FPP (million)",
     color = "Year"
   ) +
   scale_color_manual(values = c("#ffa600", "#5c3811"), name = "Year", labels = c("2010", "2022"))+
-  theme_classic(base_size = 20) +
+  theme_classic(base_size = 10) +
   theme(legend.position = c(0.8, 0.8),
         plot.margin = unit(c(1, 1, 1, 1), "lines")) -> fpp_thresholds
 
@@ -172,24 +174,27 @@ results_bioma %>%
 ggplot(results_bioma_diff, aes(x = threshold, y = fpp_change)) +
   geom_col(fill = "#A50026") +
   annotate("segment", x = 0, xend = 20, y = -1893017, yend = -1893017, linetype = "dashed", color = "lightgrey") +
-  annotate("text", label = "-1.9", x = 2.5, y = -1860000, color = "grey60")+
+  annotate("text", label = "-1.9", x = 2.5, y = -1843017, color = "grey60", size = 2)+
   annotate("segment", x = 0, xend = 50, y = -1321012, yend = -1321012, linetype = "dashed", color = "lightgrey") +
-  annotate("text", label = "-1.3", x = 2.5, y = -1290000, color = "grey60")+
-  annotate("segment", x = 0, xend = 70, y = -973210, yend = -973210, linetype = "dashed", color = "lightgrey") +
-  annotate("text", label = "-0.9", x = 2.5, y = -945000, color = "grey60")+
+  annotate("text", label = "-1.3", x = 2.5, y = -1271012, color = "grey60", size = 2)+
+  annotate("segment", x = 0, xend = 70, y = -975210, yend = -973210, linetype = "dashed", color = "lightgrey") +
+  annotate(geom = "text", label = "-0.9", x = 2.5, y = -925210, color = "grey60", size = 2)+
   scale_x_continuous(position = "top", breaks = seq(10, 100, 10), expand = c(0, 0), limits = c(0, NA)) +
-  scale_y_continuous(labels = label_number(scale = 1e-6), expand = c(0, 0)) +
+  scale_y_continuous(labels = label_number(scale = 1e-6), expand = c(0, 0.05)) +
   labs(x = " Forest cover threshold (%)", y = "Absolute change (million)")+
-  theme_classic(base_size = 20) -> fpp_thresholds_change
+  theme_classic(base_size = 10) -> fpp_thresholds_change
 
 ###Figure 1---
 # fpp_thresholds + fpp_thresholds_change + plot_layout(ncol = 2) +
-#   plot_annotation(tag_levels = "a", theme = theme(plot.tag = element_text(face = "bold", size = 14)))
-#   ggsave(filename = "/Users/user/Library/CloudStorage/OneDrive-TheUniversityofManchester/outros_trampos/Manuscritos/FPP_caat/manuscript/PNAS/PNAS_lucas_resubmissao/Fig_1.jpg",
-#          dpi = 300,
-#          width = 16,
-#          height = 9)
-
+#   plot_annotation(tag_levels = "A", theme = theme(plot.tag = element_text(face = "bold", size = 12))) -> fig1
+#   ggsave(plot = fig1,
+#          filename = "/Users/user/Library/CloudStorage/OneDrive-TheUniversityofManchester/outros_trampos/Manuscritos/FPP_caat/manuscript/PNAS/PNAS_lucas_resubmissao/Fig_1.tiff",
+#          units = "in",
+#          device = "tiff",
+#          dpi = 600,
+#          width = 7,
+#          height = 3.5)
+  
 #rate of change per threshold----
 results_bioma_diff %>% 
   mutate(taxa_anual = (`2022`/`2010`)^(1/12) - 1,
