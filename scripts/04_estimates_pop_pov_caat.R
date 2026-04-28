@@ -10,6 +10,7 @@ library(readxl)
 #data----
 read_sf("/Users/user/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap3/data/pop_sc_caat_2022_5880.gpkg") -> pop_sc_2022
 read_tracts(year = 2022, dataset = "ResponsavelRenda") -> sc_respRenda_2022
+read_xlsx("data/tabela_mun_nova.xlsx") -> tab_mun_nova
 
 #organization----
 sc_respRenda_2022 %>% 
@@ -39,8 +40,6 @@ renda_flag %>%
   glimpse
 
 ## mudança na população rural da Caatinga----
-read_xlsx("data/tabela_mun_nova.xlsx") -> tab_mun_nova
-
 tab_mun_nova %>%
   mutate(rural_pop_perc_change = perc_popRur_2022 - perc_popRur_2010) %>% 
   mutate(
