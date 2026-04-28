@@ -64,4 +64,4 @@ results_wide %>%
   dplyr::select(-geometry) %>% 
   glimpse -> results_wide
 
-write.csv(x = results_wide, file = "~/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap3/data/buffer_forest.csv")
+write.csv(x = results_wide, file = "data/buffer_forest.csv")
