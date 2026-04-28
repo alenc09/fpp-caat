@@ -1,19 +1,33 @@
+# R
 .Rproj.user
 .Rhistory
 .RData
 .Ruserdata
-data
-dev_test2.RData
-_2.Rdata.RData
-Lucas-article-pop-change.odt
+*.Rdata
+
+# Large/external data files
+*.tif
+*.gpkg
+*.shp
+*.dbf
+*.prj
+*.shx
 buff_lsm_2006.csv
 buff_lsm_2017.csv
-impacts_results.docx
-impacts_results_10.docx
-impacts_results_20.docx
-impacts_results_50.docx
-impacts_results_70.docx
-impacts_results_fpp_50.docx
-impacts_results_fpp_70.docx
-model_fit_comparison.docx
-impacts_results.docx
+
+# Output documents
+*.docx
+*.odt
+
+# Claude Code internals
+memory/
+CLAUDE.md
+
+# Presentation assets
+libs/
+
+# RMarkdown output
+img/figure-html/
+
+# macOS
+.DS_Store
