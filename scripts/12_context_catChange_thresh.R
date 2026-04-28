@@ -4,10 +4,9 @@
 #libraries----
 library(sf)
 library(dplyr)
-library(nnet)
+library(car)
 library(spdep)
 library(spatialreg)
-library(ggplot2)
 library(purrr)
 library(tibble)
 library(officer)
@@ -46,7 +45,7 @@ nb2listw(mat_dist_mun_caat_70,
 ##forest
 mean_forest_perc_change ~ change_popUrb + change_ifdm_saude +
   change_mean_respRenda + change_taxa_u5mort + change_cisternas +
-  # change_irrigation + 
+  # change_irrigation excluded: insufficient data at 70% threshold
   change_public_light +
   change_bovino_hectare + change_caprino_hectare + change_pib_agro -> form_forest
 
@@ -85,18 +84,17 @@ doc <- read_docx() %>%
 print(doc, target = "impacts_results_70.docx")
 
 
-################################################################################
 ##fpp----
 mean_fpp_perc_change ~ change_popUrb + change_ifdm_saude +
-  change_mean_respRenda + change_taxa_u5mort + change_cisternas + 
-  # change_irrigation + 
+  change_mean_respRenda + change_taxa_u5mort + change_cisternas +
+  # change_irrigation excluded: insufficient data at 70% threshold
   change_public_light +
   change_bovino_hectare + change_caprino_hectare + change_pib_agro -> form_fpp
 
 errorsarlm(formula = form_fpp,
            data    = tab_mun_models_70,
            listw   = mat_dist_list_mun_caat_70,
-           Durbin  = TRUE,       # isso ativa o "Durbin" (variáveis explicativas defasadas)
+           Durbin  = TRUE,
            zero.policy = TRUE) -> mod_spatial_fpp_70
 
 impacts(mod_spatial_fpp_70, listw = mat_dist_list_mun_caat_70, R = 1000) -> imp_mod_spatial_fpp_70
