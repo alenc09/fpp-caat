@@ -240,11 +240,11 @@ ggplot(results_bioma_diff, aes(x = threshold, y = fpp_change)) +
   labs(x = "Forest cover threshold (%)", y = "Absolute change (million)") +
   theme_classic(base_size = 10) -> fpp_thresholds_change
 
-# fpp_thresholds + fpp_thresholds_change + plot_layout(ncol = 2) +
-#   plot_annotation(tag_levels = "A", theme = theme(plot.tag = element_text(face = "bold", size = 12))) -> fig1
-# ggsave(plot = fig1,
-#        filename = "/Users/user/Library/CloudStorage/OneDrive-TheUniversityofManchester/outros_trampos/Manuscritos/FPP_caat/manuscript/PNAS/PNAS_lucas_resubmissao/Fig_1.tiff",
-#        units = "in", device = "tiff", dpi = 600, width = 7, height = 3.5)
+fpp_thresholds + fpp_thresholds_change + plot_layout(ncol = 2) +
+  plot_annotation(tag_levels = "A", theme = theme(plot.tag = element_text(face = "bold", size = 12))) -> fig1
+
+ggsave(plot = fig1, filename = "img/fig1.tiff",
+       units = "in", device = "tiff", dpi = 600, width = 7, height = 3.5)
 
 ##Supplementary Figure 2 — FPP per state at varying thresholds
 ggplot(estimates_fpp_states_all, aes(x = limiar, y = pop_est, color = code_state)) +
@@ -257,5 +257,4 @@ ggplot(estimates_fpp_states_all, aes(x = limiar, y = pop_est, color = code_state
   labs(x = "Forest cover threshold (%)", y = "Number of FPP", color = "State") +
   theme_classic(base_size = 20) -> SF_2
 
-# ggsave(plot = SF_2,
-#        filename = "/Users/user/Library/CloudStorage/OneDrive-TheUniversityofManchester/outros_trampos/Manuscritos/FPP_caat/manuscript/PNAS/PNAS_lucas_resubmissao/SF_2.jpg")
+ggsave(plot = SF_2, filename = "img/SF_2.jpg")
