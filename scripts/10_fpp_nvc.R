@@ -6,6 +6,8 @@ library(sf)
 library(dplyr)
 library(ggplot2)
 library(patchwork)
+library(geobr)
+library(ggthemes)
 
 
 #data----
@@ -47,6 +49,11 @@ coords_estados <- data.frame(
   x = c(-42, -39.5, -36.5, -35.5, -34.5, -34.4, -36, -39, -42.4),
   y = c(-16.8, -15, -11, -10, -8.5, -7, -4.7, -2.9, -5)
 )
+
+coords_estados_sf <- st_as_sf(coords_estados, coords = c("x", "y"), crs = 4326) %>%
+  st_transform(5880)
+
+bbox <- st_bbox(tab_mun_analysis)
 #análises----
 ##at landscape level----
 ###quantifying fpp and forest cover change per category
@@ -130,9 +137,5 @@ fpp_forest_all + map_forest_fpp +
   plot_annotation() -> fig_3 #, theme = theme(plot.tag = element_text(size = 12))) 
 
 
-ggsave(plot = fig_3, filename = "/Users/user/Library/CloudStorage/OneDrive-TheUniversityofManchester/outros_trampos/Manuscritos/FPP_caat/manuscript/PNAS/PNAS_lucas_resubmissao/Fig_3.tiff",
-       units = "in",
-       device = "tiff",
-       dpi = 600,
-       width = 6,
-       height = 3)
+ggsave(plot = fig_3, filename = "img/fig3.tiff",
+       units = "in", device = "tiff", dpi = 600, width = 6, height = 3)
