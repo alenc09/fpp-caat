@@ -380,50 +380,6 @@ aw_interpolate(.data = caat_mun_2022_5880,                # malha destino (2022)
 
 dados_mun_awa_2010 %>% glimpse
 
-# ##2017
-
-# 
-# caat_mun_2017_5880 %>%
-#   dplyr::select(CD_GEOCMU) %>% 
-#   mutate(code_mun = as.factor(CD_GEOCMU), .keep = "unused") %>% 
-#   mutate(code_mun_short = code_mun %>%
-#            as.character() %>%
-#            str_sub(1, -2) %>%              
-#            factor()) %>% 
-#   left_join(y = dplyr::select(agrifam_cadunico_2012_2022, code_mun, agrifam_cadunico_2017), by = c("code_mun_short" = "code_mun")) %>% 
-#   left_join(y = dplyr::select(IFDM_saude_2013_2022, code_mun, ifdm_saude_2017), by = c("code_mun_short" = "code_mun")) %>% 
-#   left_join(y = dplyr::select(pessoas_cadunico_2012_2022, code_mun, pessoas_cadunico_2017), by = c("code_mun_short" = "code_mun")) %>% 
-#   left_join(y = taxa_u5mort_2017, by = c("code_mun_short" = "code_mun")) %>% 
-#   left_join(y = dplyr::select(cisternas, code_mun, cisternas_2017), by = c("code_mun_short" = "code_mun")) %>% 
-#   mutate(cisternas_2017 = replace_na(cisternas_2017, 0)) %>% 
-#   left_join(y = dplyr::select(irrigation_2010_2022, code_mun, irrigation_m3s_2017)) %>% 
-#   left_join(y = domicilios_rural_brasil_2022) %>% 
-#   left_join(y = pop_mun_2022) %>% 
-#   mutate(area_m2 = st_area(geom),
-#          area_ha = as.numeric(area_m2)/10000,
-#          perc_agrifam_cadunico_2017 = (agrifam_cadunico_2017/domicilios_rural_2022)*100,
-#          perc_pessoas_cadunico_2017 = (pessoas_cadunico_2017/pop_total_2022)*100,
-#          perc_cisternas_2017 = (cisternas_2017/domicilios_rural_2022)*100,
-#          irrigacao_hectare_2017 = irrigation_m3s_2017/area_ha) %>%
-#   glimpse -> caat_mun_dados_2017
-
-# write_sf(obj = caat_mun_dados_2017, dsn = "/Users/user/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap3/data/caat_mun_dados_2017.gpkg")
-
-# ##area weighted average
-# aw_interpolate(.data = caat_mun_2022_5880,                # malha destino (2022)
-#                tid = code_mun,                 # ID único da malha destino
-#                source = caat_mun_dados_2017,               # malha de origem (2010)
-#                sid = code_mun,                 # ID único da malha origem
-#                weight = "sum",                  # tipo de agregação
-#                output = "sf",               # retorna um objeto sf
-#                intensive = c("perc_agrifam_cadunico_2017",
-#                              "ifdm_saude_2017", "perc_pessoas_cadunico_2017",
-#                              "taxa_u5mort_2017", "perc_cisternas_2017",
-#                              "irrigacao_hectare_2017")                 # ou variáveis densidade
-# ) -> dados_mun_awa_2017
-# 
-# dados_mun_awa_2017 %>% glimpse
-
 ###2022
 censobr::read_tracts(dataset = "Basico", year = 2022) -> basico_2022
 
@@ -477,7 +433,7 @@ tabela_buffer%>%
   rename(geometry = geom) %>% 
   glimpse -> tabela_buffer_nova
 
-# writexl::write_xlsx(x = tabela_buffer_nova, path = "data/tabela_buffer_nova.xlsx")
+writexl::write_xlsx(x = tabela_buffer_nova, path = "data/tabela_buffer_nova.xlsx")
 # st_write(obj = tabela_buffer_nova, dsn = "/Users/user/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap3/data/tabela_buffer_nova.gpkg", append=F)
 
 ##Escala de município----
@@ -510,12 +466,12 @@ df_wide %>%
   select(-starts_with("sum_perc_"), -ends_with("2017"), -ends_with("2018"), -code_short) %>%  #remover as colunas que não fazem sentido
   glimpse -> tab_mun_nova
 
-# writexl::write_xlsx(x = tab_mun_nova, path = "data/tabela_mun_nova.xlsx")
+writexl::write_xlsx(x = tab_mun_nova, path = "data/tabela_mun_nova.xlsx")
 # write_sf(obj = tab_mun_nova, dsn = "/Users/user/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap3/data/tab_mun_nova.gpkg")
 
-##Robustness check - Only landscapes with 50% or 70% forest cover
-df_long <- tabela_buffer %>% 
-  filter(perc_forest_2022 >= 50) %>% # changed to test the 10%, 50% and 70% thresholds
+##Robustness check - Only landscapes with >= 50% forest cover
+df_long <- tabela_buffer %>%
+  filter(perc_forest_2022 >= 50) %>%
   pivot_longer(
     cols = matches("perc_forest_\\d+|fpp_\\d+"),
     names_to = c("var", "year"),
@@ -543,5 +499,5 @@ df_wide %>%
   select(-starts_with("sum_perc_"), -ends_with("2017"), -ends_with("2018"), -code_short) %>%  #remover as colunas que não fazem sentido
   glimpse -> tab_mun_nova_50
 
-# writexl::write_xlsx(x = tab_mun_nova, path = "data/tabela_mun_70.xlsx")
-write_sf(obj = tab_mun_nova_50, dsn = "/Users/user/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap3/data/tab_mun_50.gpkg")
+writexl::write_xlsx(x = tab_mun_nova_50, path = "data/tabela_mun_50.xlsx")
+# write_sf(obj = tab_mun_nova_50, dsn = "/Users/user/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap3/data/tab_mun_50.gpkg")
