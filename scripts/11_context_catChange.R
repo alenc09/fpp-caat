@@ -4,6 +4,7 @@
 #Library----
 library(sf)
 library(dplyr)
+library(car)
 library(nnet)
 library(spdep)
 library(spatialreg)
@@ -42,15 +43,6 @@ poly2nb(tab_mun_analysis$geom,
 nb2listw(mat_dist_mun_caat) -> mat_dist_list_mun_caat
 
 #Analysis----
-##multinomial----
-# multinom(data = tab_mun_models,
-#          cat_change ~ change_agrifam_cadunico + change_popUrb + change_ifdm_saude +
-#            change_pessoas_cadunico + change_taxa_u5mort + change_cisternas +
-#            change_irrigation + change_saneamento + change_public_light) -> mod_multinom
-# 
-# summary(mod_multinom)
-# exp(coef(mod_multinom))
-
 ##linear----
 ###forest
 glm(data = tab_mun_models,
@@ -59,8 +51,7 @@ glm(data = tab_mun_models,
       change_irrigation + change_saneamento + change_public_light +
       change_bovino_hectare + change_caprino_hectare + change_pib_agro) -> mod_glm_forest
 
-car:::vif(mod_glm_forest)
-# plot(mod_glm_forest)
+vif(mod_glm_forest)
 summary(mod_glm_forest)
 lm.morantest(model = mod_glm_forest, listw = mat_dist_list_mun_caat)
 
@@ -72,8 +63,7 @@ glm(data = tab_mun_models,
       change_irrigation + change_saneamento + change_public_light +
       change_bovino_hectare + change_caprino_hectare + change_pib_agro) -> mod_glm_fpp
 
-car:::vif(mod_glm_fpp)
-# plot(mod_glm_fpp)
+vif(mod_glm_fpp)
 summary(mod_glm_fpp)
 lm.morantest(model = mod_glm_fpp, listw = mat_dist_list_mun_caat)
 
@@ -154,7 +144,7 @@ ft <- flextable(fit_stats) %>%
 doc <- read_docx() %>%
   body_add_flextable(ft)
 
-print(doc, target = "model_fit_comparison.docx")
+print(doc, target = "model_fit_forest.docx")
 
 ##fpp----
 mean_fpp_perc_change ~ change_popUrb + change_ifdm_saude +
@@ -165,7 +155,7 @@ mean_fpp_perc_change ~ change_popUrb + change_ifdm_saude +
 errorsarlm(formula = form_fpp,
            data    = tab_mun_models,
            listw   = mat_dist_list_mun_caat,
-           Durbin  = TRUE,       # isso ativa o "Durbin" (variáveis explicativas defasadas)
+           Durbin  = TRUE,
            zero.policy = TRUE) -> mod_spatial_fpp
 
 impacts(mod_spatial_fpp, listw = mat_dist_list_mun_caat, R = 1000) -> imp_mod_spatial_fpp
@@ -206,58 +196,7 @@ ft <- flextable(fit_stats) %>%
 doc <- read_docx() %>%
   body_add_flextable(ft)
 
-print(doc, target = "model_fit_comparison.docx")
-
-##valor bruto----
-# glm(data = tab_mun_analysis,
-#     mean_perc_forest_2022 ~  perc_agrifam_cadunico_2012 +
-#       perc_popUrb_2010 + ifdm_saude_2013 + mean_respRenda_2010 + taxa_u5mort_2010 +
-#       perc_cisternas_2010 + irrigacao_hectare_2010 + perc_saneamento_2010 + 
-#       perc_public_light_2010 + bovino_hectare_2010 + caprino_hectare_2010 +
-#       perc_pib_agro_2010) %>% 
-#   summary
-# 
-# glm(data = tab_mun_analysis,
-#     mean_perc_forest_2023 ~ mean_perc_forest_2022 + perc_agrifam_cadunico_2022 +
-#       perc_popUrb_2022 + ifdm_saude_2022 + mean_respRenda_2022 + taxa_u5mort_2022 +
-#       perc_cisternas_2022 + irrigacao_hectare_2022 + perc_saneamento_2022 +
-#       perc_public_light_2022 + bovino_hectare_2022 + caprino_hectare_2022 +
-#       perc_pib_agro_2021) -> mod_glm_abs_forest
-# 
-# car:::vif(mod_glm_abs_forest)
-# plot(mod_glm_abs_forest)
-# summary(mod_glm_abs_forest)
-# lm.morantest(model = mod_glm_abs_forest, listw = mat_dist_list_mun_caat)
-# 
-# # 
-# 
-# glm(data = tab_mun_analysis,
-#       sum_fpp_2022 ~  sum_fpp_2010 + perc_agrifam_cadunico_2022 +
-#       perc_popUrb_2022 + ifdm_saude_2022 + mean_respRenda_2022 + taxa_u5mort_2022 +
-#       perc_cisternas_2022 + irrigacao_hectare_2022 + perc_saneamento_2022 +
-#       perc_public_light_2022 + bovino_hectare_2022 + caprino_hectare_2022 +
-#       perc_pib_agro_2021) -> mod_glm_abs_fpp
-# 
-# car:::vif(mod_glm_abs_fpp)
-# plot(mod_glm_abs_fpp)
-# summary(mod_glm_abs_fpp)
-# lm.morantest(model = mod_glm_abs_fpp, listw = mat_dist_list_mun_caat)
-# 
-# ##spatial
-# ###forest
-# mean_perc_forest_2022 ~ mean_perc_forest_2010 + perc_agrifam_cadunico_2022 +
-#   perc_popUrb_2022 + ifdm_saude_2022 + mean_respRenda_2022 + taxa_u5mort_2022 +
-#   perc_cisternas_2022 + irrigacao_hectare_2022 + perc_saneamento_2022 +
-#   perc_public_light_2022 + bovino_hectare_2022 + caprino_hectare_2022 +
-#   perc_pib_agro_2021 -> form_abs_forest
-# 
-# errorsarlm(formula = form_abs_forest,
-#            data    = tab_mun_analysis,
-#            listw   = mat_dist_list_mun_caat,
-#            Durbin  = TRUE,       # isso ativa o "Durbin" (variáveis explicativas defasadas)
-#            zero.policy = TRUE) -> mod_spatial_abs_forest
-# 
-# summary(mod_spatial_abs_forest)
+print(doc, target = "model_fit_fpp.docx")
 
 ##forest robustness check
 change_mean_perc_forest ~ change_agrifam_cadunico + change_popUrb + change_ifdm_saude +
