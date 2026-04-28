@@ -23,6 +23,10 @@ buff_lsm_2017.csv
 memory/
 CLAUDE.md
 
+# Press release scripts (not part of main analysis)
+scripts/21_press_release_stats.R
+scripts/22_press_release_development.R
+
 # Presentation assets
 libs/
 
