@@ -41,9 +41,7 @@ tabela_buffer_nova %>%
 
 ## Extrapolation to the entire biome
 tabela_buffer_nova %>%
-  rename(geom_buffer = geom) %>%
-  mutate(area_m2 = as.numeric(st_area(geom_buffer)),
-         area_km2 = area_m2/1e6) %>%
+  mutate(area_km2 = pi * 5^2) %>%  # 5 km radius circular buffers
   filter(!is.na(fpp_2022), !is.na(perc_forest_2022)) %>%
   glimpse -> buffers
 

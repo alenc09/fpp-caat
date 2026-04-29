@@ -17,9 +17,7 @@ read_sf("/Users/user/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado
 read_sf("/Users/user/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap3/data/caat_states_5880.gpkg") -> caat_states
 
 tabela_buffer_nova %>%
-  rename(geom_buffer = geom) %>%
-  mutate(area_m2 = as.numeric(st_area(geom_buffer)),
-         area_km2 = area_m2/1e6) %>%
+  mutate(area_km2 = pi * 5^2) %>%  # 5 km radius circular buffers
   filter(!is.na(fpp_2022), !is.na(perc_forest_2022)) -> buffers
 
 caat_states %>%

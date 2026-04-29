@@ -14,7 +14,7 @@ library(flextable)
 
 # Data ----
 read_xlsx(here("data/tabela_buffer_nova.xlsx")) %>%
-  mutate(area_km2 = area_m2 / 1e6) %>%
+  mutate(area_km2 = pi * 5^2) %>%  # 5 km radius circular buffers
   filter(!is.na(fpp_2022), !is.na(perc_forest_2022)) -> buffers
 
 # Caatinga biome area from geobr ----
