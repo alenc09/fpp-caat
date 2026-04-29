@@ -2,18 +2,39 @@
 # Spatial autocorrelation test (Global Moran's I) for GLM residuals
 # of forest cover change and FPP change models
 
-#Libraries----
-library(sf)
+# Libraries ----
+library(here)
+library(readr)
 library(dplyr)
+library(sf)
+library(geobr)
 library(spdep)
 library(tibble)
 library(officer)
 library(flextable)
 
-#Data----
-read_sf("/Users/user/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap3/data/tab_mun_analysis.gpkg", stringsAsFactors = T) -> tab_mun_analysis
+# Data ----
+read_csv(here("data/tab_mun_analysis.csv"), show_col_types = FALSE) -> tab_mun_analysis
 
-#Organisation----
+# Municipality geometries from geobr (for spatial weights matrix) ----
+read_municipality(year = 2020, showProgress = FALSE) -> br_mun
+read_biomes(showProgress = FALSE) %>%
+  filter(name_biome == "Caatinga") %>%
+  st_transform(4674) -> caat_biome
+
+br_mun[caat_biome, ] %>%
+  filter(code_muni %in% tab_mun_analysis$code_mun) %>%
+  arrange(code_muni) -> mun_caat_sf
+
+tab_mun_analysis <- tab_mun_analysis %>%
+  filter(code_mun %in% mun_caat_sf$code_muni) %>%
+  arrange(code_mun)
+
+# Spatial weights ----
+poly2nb(mun_caat_sf$geom, queen = TRUE) -> nb_mun
+nb2listw(nb_mun) -> listw_mun
+
+# Compute change variables for models ----
 tab_mun_analysis %>%
   mutate(change_agrifam_cadunico  = perc_agrifam_cadunico_2022 - perc_agrifam_cadunico_2012,
          change_popUrb             = perc_popUrb_2022 - perc_popUrb_2010,
@@ -29,10 +50,7 @@ tab_mun_analysis %>%
          change_pib_agro           = perc_pib_agro_2021 - perc_pib_agro_2010,
          .keep = "unused") -> tab_mun_models
 
-poly2nb(tab_mun_analysis$geom, queen = TRUE) -> mat_dist_mun_caat
-nb2listw(mat_dist_mun_caat) -> mat_dist_list_mun_caat
-
-#Models----
+# GLMs ----
 glm(data = tab_mun_models,
     mean_forest_perc_change ~ change_popUrb + change_ifdm_saude +
       change_mean_respRenda + change_taxa_u5mort + change_cisternas +
@@ -45,22 +63,29 @@ glm(data = tab_mun_models,
       change_irrigation + change_saneamento + change_public_light +
       change_bovino_hectare + change_caprino_hectare + change_pib_agro) -> mod_glm_fpp
 
-#Moran's I test----
-lm.morantest(model = mod_glm_forest, listw = mat_dist_list_mun_caat) -> moran_forest
-lm.morantest(model = mod_glm_fpp,    listw = mat_dist_list_mun_caat) -> moran_fpp
+# Moran's I test ----
+lm.morantest(model = mod_glm_forest, listw = listw_mun) -> moran_forest
+lm.morantest(model = mod_glm_fpp,    listw = listw_mun) -> moran_fpp
 
-#Export----
+# Export ----
 tibble(
-  Model      = c("Forest cover", "Forest-proximate people"),
+  Model       = c("Forest cover", "Forest-proximate people"),
   `Moran's I` = c(moran_forest$estimate["Moran I statistic"],
                    moran_fpp$estimate["Moran I statistic"]),
-  `p-value`  = c(moran_forest$p.value, moran_fpp$p.value)
+  `p-value`   = c(moran_forest$p.value, moran_fpp$p.value)
 ) %>%
   mutate(across(where(is.numeric), ~ round(., 4))) -> tab_moran
 
-ft <- flextable(tab_moran) %>% autofit()
+ft <- flextable(tab_moran) %>%
+  set_table_properties(layout = "autofit") %>%
+  bold(part = "header") %>%
+  fontsize(size = 10, part = "all") %>%
+  font(fontname = "Times New Roman", part = "all")
 
 read_docx() %>%
-  body_add_par("Supplementary Table 2. Spatial autocorrelation test (Global Moran's I for regression residuals) of GLMs models of forest cover change and forest-proximate people change.", style = "Normal") %>%
+  body_add_par(
+    "Supplementary Table 2. Spatial autocorrelation test (Global Moran's I for regression residuals) of GLMs models of forest cover change and forest-proximate people change.",
+    style = "Normal"
+  ) %>%
   body_add_flextable(ft) %>%
-  print(target = "supp_table2_moran.docx")
+  print(target = here("supp_table2_moran.docx"))

@@ -2,37 +2,43 @@
 
 # Libraries ----
 library(here)
-library(sf)
+library(readxl)
 library(dplyr)
 library(stringr)
 library(purrr)
 library(tibble)
 library(tidyr)
+library(sf)
+library(geobr)
 library(scales)
 library(officer)
 library(flextable)
 
 # Data ----
-read_sf("/Users/user/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap3/data/tabela_buffer_nova.gpkg") -> tabela_buffer_nova
-read_sf("/Users/user/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap3/data/caat_states_5880.gpkg") -> caat_states
-
-tabela_buffer_nova %>%
-  rename(geom_buffer = geom) %>%
-  mutate(area_m2 = as.numeric(st_area(geom_buffer)),
-         area_km2 = area_m2 / 1e6) %>%
+read_xlsx(here("data/tabela_buffer_nova.xlsx")) %>%
+  mutate(area_km2   = area_m2 / 1e6,
+         code_state = as.factor(str_sub(as.character(code_mun), 1, 2))) %>%
   filter(!is.na(fpp_2022), !is.na(perc_forest_2022)) -> buffers
 
-caat_states %>%
-  mutate(area_m2 = as.numeric(st_area(geom)),
-         area_state_km2 = area_m2 / 1e6,
-         code_state = as.factor(code_state)) -> caat_states
+# State areas within Caatinga from geobr ----
+read_biomes(showProgress = FALSE) %>%
+  filter(name_biome == "Caatinga") %>%
+  st_transform(5880) -> caat_biome
+
+read_state(year = 2020, showProgress = FALSE) %>%
+  st_transform(5880) %>%
+  st_intersection(caat_biome) %>%
+  mutate(area_state_km2 = as.numeric(st_area(geom)) / 1e6,
+         code_state     = as.factor(code_state)) %>%
+  select(code_state, name_state, area_state_km2) %>%
+  as.data.frame() %>%
+  select(-geom) -> caat_states
 
 thresholds <- c(20, 50, 70)
 
 # State FPP estimates at selected thresholds ----
 estimates_states <- map_dfr(thresholds, function(lim) {
   buffers %>%
-    mutate(code_state = as.factor(str_sub(as.character(code_mun), 1, 2))) %>%
     as.data.frame() %>%
     mutate(is_ge = perc_forest_2022 >= lim) %>%
     group_by(code_state) %>%
@@ -42,8 +48,8 @@ estimates_states <- map_dfr(thresholds, function(lim) {
       prop_buffers    = mean(is_ge, na.rm = TRUE),
       .groups = "drop"
     ) %>%
-    mutate(dens_hat = pop_sample / area_sample_km2) %>%
-    left_join(as.data.frame(caat_states), by = "code_state") %>%
+    mutate(dens_hat  = pop_sample / area_sample_km2) %>%
+    left_join(caat_states, by = "code_state") %>%
     mutate(area_est_km2 = prop_buffers * area_state_km2,
            pop_est      = round(dens_hat * area_est_km2),
            threshold    = lim)
@@ -56,7 +62,7 @@ estimates_states %>%
   ungroup() %>%
   select(name_state, threshold, pop_est, rank) %>%
   mutate(
-    pop_fmt  = label_comma()(pop_est),
+    pop_fmt   = label_comma()(pop_est),
     threshold = paste0("pct", threshold)
   ) %>%
   select(-pop_est) %>%

@@ -2,14 +2,16 @@
 # assign forest/FPP change categories (GG/GP/PG/PP/stable)
 
 #Libraries----
-library(sf)
+library(here)
+library(readxl)
 library(dplyr)
+library(readr)
 
 #Data----
-read_sf("/Users/user/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap3/data/tabela_buffer_nova.gpkg") -> tab_buffer
-read_sf("/Users/user/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap3/data/tab_mun_nova.gpkg") -> tab_mun
-read_sf("/Users/user/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap3/data/tab_mun_50.gpkg") -> tab_mun_50
-read_sf("/Users/user/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap3/data/tab_mun_70.gpkg") -> tab_mun_70
+read_xlsx(here("data/tabela_buffer_nova.xlsx")) -> tab_buffer
+read_xlsx(here("data/tabela_mun_nova.xlsx"))    -> tab_mun
+read_xlsx(here("data/tabela_mun_50.xlsx"))      -> tab_mun_50
+read_xlsx(here("data/tabela_mun_70.xlsx"))      -> tab_mun_70
 
 #Helper function: assign change categories----
 add_cat_change <- function(df, forest_var, fpp_var) {
@@ -36,7 +38,8 @@ tab_buffer %>%
   add_cat_change("forest_perc_change", "fpp_perc_change") %>%
   glimpse -> tab_buffer_analysis
 
-write_sf(obj = tab_buffer_analysis, dsn = "/Users/user/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap3/data/tab_buffer_analysis.gpkg")
+write_csv(tab_buffer_analysis %>% select(-any_of(c("geom", "geometry"))),
+          here("data/tab_buffer_analysis.csv"))
 
 #Municipality scale — helper to compute change vars and categories----
 prep_mun <- function(tab) {
@@ -54,6 +57,6 @@ tab_mun_analysis    <- prep_mun(tab_mun)    %>% glimpse
 tab_mun_analysis_50 <- prep_mun(tab_mun_50) %>% glimpse
 tab_mun_analysis_70 <- prep_mun(tab_mun_70) %>% glimpse
 
-write_sf(obj = tab_mun_analysis,    dsn = "/Users/user/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap3/data/tab_mun_analysis.gpkg")
-write_sf(obj = tab_mun_analysis_50, dsn = "/Users/user/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap3/data/tab_mun_analysis_50.gpkg")
-write_sf(obj = tab_mun_analysis_70, dsn = "/Users/user/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap3/data/tab_mun_analysis_70.gpkg")
+write_csv(tab_mun_analysis    %>% select(-any_of(c("geom", "geometry"))), here("data/tab_mun_analysis.csv"))
+write_csv(tab_mun_analysis_50 %>% select(-any_of(c("geom", "geometry"))), here("data/tab_mun_analysis_50.csv"))
+write_csv(tab_mun_analysis_70 %>% select(-any_of(c("geom", "geometry"))), here("data/tab_mun_analysis_70.csv"))
