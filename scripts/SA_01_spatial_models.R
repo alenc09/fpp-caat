@@ -2,6 +2,7 @@
 # Script to evaluate changes in socioeconomic conditions per group
 
 #Library----
+library(here)
 library(sf)
 library(dplyr)
 library(car)
@@ -13,9 +14,15 @@ library(purrr)
 library(tibble)
 library(officer)
 library(flextable)
+library(readr)
+library(geobr)
 
 #data----
-read_sf("/Users/user/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap3/data/tab_mun_analysis.gpkg", stringsAsFactors = T) -> tab_mun_analysis
+read_csv(here("data/tab_mun_analysis.csv"), show_col_types = FALSE) %>%
+  mutate(cat_change = as.factor(cat_change)) -> tab_mun_data
+
+read_municipality(year = 2020) %>%
+  inner_join(tab_mun_data, by = c("code_muni" = "code_mun")) -> tab_mun_analysis
 
 ##organisation----
 tab_mun_analysis %>% 
@@ -210,6 +217,11 @@ errorsarlm(formula = form_forest_23,
            Durbin  = TRUE,       
            zero.policy = TRUE) -> mod_spatial_forest_23
 
-impacts(mod_spatial_forest_23, listw = mat_dist_list_mun_caat, R = 1000) -> imp_mod_spatial_forest_23 
+impacts(mod_spatial_forest_23, listw = mat_dist_list_mun_caat, R = 1000) -> imp_mod_spatial_forest_23
 summary(imp_mod_spatial_forest_23, short = T)
+
+dir.create(here("output"), showWarnings = FALSE)
+sink(here("output/sessioninfo_SA_01.txt"))
+print(sessionInfo())
+sink()
 

@@ -2,12 +2,15 @@
 # at landscape and municipality scales
 
 # Libraries ----
-library(sf)
+library(here)
 library(dplyr)
+library(readr)
 
 # Data ----
-read_sf("/Users/user/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap3/data/tab_buffer_analysis.gpkg", stringsAsFactors = T) -> tab_buff_analysis
-read_sf("/Users/user/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap3/data/tab_mun_analysis.gpkg", stringsAsFactors = T) -> tab_mun_analysis
+read_csv(here("data/tab_buffer_analysis.csv"), show_col_types = FALSE) %>%
+  mutate(cat_change = as.factor(cat_change)) -> tab_buff_analysis
+read_csv(here("data/tab_mun_analysis.csv"), show_col_types = FALSE) %>%
+  mutate(cat_change = as.factor(cat_change)) -> tab_mun_analysis
 
 # Data organisation ----
 tab_buff_analysis %>%

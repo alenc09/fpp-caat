@@ -5,6 +5,11 @@
 .Ruserdata
 *.Rdata
 
+# renv: track lockfile and activate.R, but not the local library cache
+renv/library/
+renv/python/
+renv/staging/
+
 # Large/external data files
 *.tif
 *.gpkg
@@ -32,6 +37,9 @@ libs/
 
 # RMarkdown output
 img/figure-html/
+
+# Session info outputs (generated locally)
+output/
 
 # macOS
 .DS_Store

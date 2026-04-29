@@ -1,19 +1,28 @@
 # Figure 3: Scatter plot and map of FPP vs forest cover change by category
 
 # Libraries ----
+library(here)
 library(sf)
 library(dplyr)
 library(ggplot2)
 library(patchwork)
 library(geobr)
 library(ggthemes)
+library(readr)
 
 # Data ----
-read_sf("/Users/user/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap3/data/tab_buffer_analysis.gpkg", stringsAsFactors = T) -> tab_buff_analysis
-read_sf("/Users/user/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap3/data/tab_mun_analysis.gpkg", stringsAsFactors = T) -> tab_mun_analysis
-read_biomes() %>% filter(name_biome == "Caatinga") -> caat_shp
+read_csv(here("data/tab_buffer_analysis.csv"), show_col_types = FALSE) %>%
+  mutate(cat_change = as.factor(cat_change)) -> tab_buff_analysis
+
+read_csv(here("data/tab_mun_analysis.csv"), show_col_types = FALSE) %>%
+  mutate(cat_change = as.factor(cat_change)) -> tab_mun_data
+
+read_biomes(year = 2019) %>% filter(name_biome == "Caatinga") -> caat_shp
 read_state(year = 2020) -> br_states
 read_municipality(year = 2020) -> br_mun
+
+br_mun %>%
+  inner_join(tab_mun_data, by = c("code_muni" = "code_mun")) -> tab_mun_analysis
 
 # Data organisation ----
 tab_buff_analysis %>%

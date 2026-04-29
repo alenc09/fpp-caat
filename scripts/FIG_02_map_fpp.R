@@ -2,21 +2,26 @@
 #Script para montar mapa da mudança de FPP na caatinga
 
 #library----
+library(here)
 library(sf)
 library(ggplot2)
 library(cowplot)
 library(geobr)
 library(dplyr)
 library(patchwork)
+library(readr)
 
 #data----
-read_sf("/Users/user/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap3/data/tab_mun_analysis.gpkg") -> tab_mun_analysis
+read_csv(here("data/tab_mun_analysis.csv"), show_col_types = FALSE) -> tab_mun_data
 
-read_biomes() %>% 
-  filter (name_biome == "Caatinga") -> caat_shp
+read_biomes(year = 2019) %>%
+  filter(name_biome == "Caatinga") -> caat_shp
 read_state(year = 2020) -> br_states
 read_municipality(year = 2020) -> br_mun
 read_country() -> br
+
+br_mun %>%
+  inner_join(tab_mun_data, by = c("code_muni" = "code_mun")) -> tab_mun_analysis
 
 st_transform(x = tab_mun_analysis, crs = 5880) -> tab_mun_analysis
 st_transform(x = caat_shp, crs = 5880) -> caat_shp

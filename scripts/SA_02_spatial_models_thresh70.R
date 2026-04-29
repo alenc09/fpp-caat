@@ -2,6 +2,7 @@
 #Script para testar diferentes limiares de cobertura florestal e seu efeito nos modelos
 
 #libraries----
+library(here)
 library(sf)
 library(dplyr)
 library(car)
@@ -11,9 +12,15 @@ library(purrr)
 library(tibble)
 library(officer)
 library(flextable)
+library(readr)
+library(geobr)
 
 #data----
-read_sf("/Users/user/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap3/data/tab_mun_analysis_70.gpkg") -> tab_mun_70
+read_csv(here("data/tab_mun_analysis_70.csv"), show_col_types = FALSE) %>%
+  mutate(cat_change = as.factor(cat_change)) -> tab_mun_70_data
+
+read_municipality(year = 2020) %>%
+  inner_join(tab_mun_70_data, by = c("code_muni" = "code_mun")) -> tab_mun_70
 
 ##organization
 tab_mun_70 %>% 
@@ -123,3 +130,8 @@ doc <- read_docx() %>%
   body_add_flextable(ft)
 
 print(doc, target = "impacts_results_fpp_70.docx")
+
+dir.create(here("output"), showWarnings = FALSE)
+sink(here("output/sessioninfo_SA_02.txt"))
+print(sessionInfo())
+sink()

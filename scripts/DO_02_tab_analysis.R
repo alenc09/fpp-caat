@@ -60,3 +60,8 @@ tab_mun_analysis_70 <- prep_mun(tab_mun_70) %>% glimpse
 write_csv(tab_mun_analysis    %>% select(-any_of(c("geom", "geometry"))), here("data/tab_mun_analysis.csv"))
 write_csv(tab_mun_analysis_50 %>% select(-any_of(c("geom", "geometry"))), here("data/tab_mun_analysis_50.csv"))
 write_csv(tab_mun_analysis_70 %>% select(-any_of(c("geom", "geometry"))), here("data/tab_mun_analysis_70.csv"))
+
+dir.create(here("output"), showWarnings = FALSE)
+sink(here("output/sessioninfo_DO_02.txt"))
+print(sessionInfo())
+sink()

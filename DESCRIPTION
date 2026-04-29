@@ -1,0 +1,43 @@
+Package: fpp-caat
+Title: Forest People-Population Dynamics in Brazil's Caatinga
+Version: 1.0.0
+Date: 2026-04-29
+Authors@R: person("Lucas", "Alencar", email = "alencar.lucasc@gmail.com", role = c("aut", "cre"))
+Description: Analysis of forest cover changes (2010-2022), rural population dynamics,
+    and socioeconomic development in Brazil's Caatinga biome.
+License: MIT
+Imports:
+    acid,
+    areal,
+    car,
+    censobr,
+    cowplot,
+    dplyr,
+    exactextractr,
+    flextable,
+    future.apply,
+    geobr,
+    ggbump,
+    ggplot2,
+    ggthemes,
+    here,
+    ipeadatar,
+    lubridate,
+    nnet,
+    officer,
+    patchwork,
+    purrr,
+    ragg,
+    raster,
+    read.dbc,
+    readr,
+    readxl,
+    scales,
+    sf,
+    sidrar,
+    spatialreg,
+    spdep,
+    stringr,
+    tibble,
+    tidyr
+Encoding: UTF-8

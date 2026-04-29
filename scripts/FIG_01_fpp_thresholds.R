@@ -11,10 +11,15 @@ library(ggplot2)
 library(scales)
 library(patchwork)
 library(ragg)
+library(readxl)
+library(geobr)
 
 # Data ----
-read_sf("/Users/user/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap3/data/tabela_buffer_nova.gpkg") -> tabela_buffer_nova
-read_sf("/Users/user/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap3/data/caat_shape_5880.shp") -> caat_shape_5880
+read_excel(here("data/tabela_buffer_nova.xlsx")) -> tabela_buffer_nova
+
+read_biomes(year = 2019) %>%
+  filter(name_biome == "Caatinga") %>%
+  mutate(area_m2 = as.numeric(st_area(geom))) -> caat_shape_5880
 
 tabela_buffer_nova %>%
   mutate(area_km2 = pi * 5^2) %>%  # 5 km radius circular buffers

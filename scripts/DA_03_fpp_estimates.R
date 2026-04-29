@@ -9,12 +9,22 @@ library(stringr)
 library(purrr)
 library(tibble)
 library(tidyr)
+library(readxl)
+library(readr)
+library(geobr)
 
 # Data ----
-read_sf("/Users/user/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap3/data/tabela_buffer_nova.gpkg") -> tabela_buffer_nova
-read_sf("/Users/user/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap3/data/caat_shape_5880.shp") -> caat_shape_5880
-read_sf("/Users/user/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap3/data/caat_states_5880.gpkg") -> caat_states
-read_sf("/Users/user/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap3/data/tab_mun_analysis.gpkg") -> tab_mun_analysis
+read_excel(here("data/tabela_buffer_nova.xlsx")) -> tabela_buffer_nova
+
+read_biomes(year = 2019) %>%
+  filter(name_biome == "Caatinga") %>%
+  mutate(area_m2 = as.numeric(st_area(geom))) -> caat_shape_5880
+
+caatinga_state_codes <- c(22L, 23L, 24L, 25L, 26L, 27L, 28L, 29L, 31L)
+read_state(year = 2020) %>%
+  filter(code_state %in% caatinga_state_codes) -> caat_states
+
+read_csv(here("data/tab_mun_analysis.csv"), show_col_types = FALSE) -> tab_mun_analysis
 
 # Biome scale ----
 ## FPP summary at landscapes >= 20% forest cover
