@@ -15,8 +15,7 @@ library(officer)
 library(flextable)
 
 # Data ----
-# Uses municipalities with mean forest cover >= 50% (tab_mun_analysis_50)
-read_csv(here("data/tab_mun_analysis_50.csv"), show_col_types = FALSE) %>%
+read_csv(here("data/tab_mun_analysis.csv"), show_col_types = FALSE) %>%
   mutate(
     change_popUrb          = perc_popUrb_2022          - perc_popUrb_2010,
     change_ifdm_saude      = ifdm_saude_2022           - ifdm_saude_2013,
@@ -45,7 +44,7 @@ tab_mun_models <- tab_mun_models %>%
   arrange(code_mun)
 
 poly2nb(mun_caat_sf$geom, queen = TRUE) %>%
-  nb2listw(zero.policy = TRUE) -> listw_mun
+  nb2listw() -> listw_mun
 
 # Model formulas ----
 form_forest <-
