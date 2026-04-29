@@ -1,7 +1,6 @@
-# Thu May 12 15:44:55 2022 ------------------------------
-#script para explorar a relação entre mudança na cobertura florestal e fpp
+# Figure 3: Scatter plot and map of FPP vs forest cover change by category
 
-#library----
+# Libraries ----
 library(sf)
 library(dplyr)
 library(ggplot2)
@@ -9,33 +8,28 @@ library(patchwork)
 library(geobr)
 library(ggthemes)
 
-
-#data----
+# Data ----
 read_sf("/Users/user/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap3/data/tab_buffer_analysis.gpkg", stringsAsFactors = T) -> tab_buff_analysis
 read_sf("/Users/user/Library/CloudStorage/OneDrive-Personal/Documentos/Doutorado/tese/cap3/data/tab_mun_analysis.gpkg", stringsAsFactors = T) -> tab_mun_analysis
-read_biomes() %>% 
-  filter (name_biome == "Caatinga") -> caat_shp
+read_biomes() %>% filter(name_biome == "Caatinga") -> caat_shp
 read_state(year = 2020) -> br_states
 read_municipality(year = 2020) -> br_mun
-read_country() -> br
 
-##organisation----
-tab_buff_analysis %>% 
-  mutate(forest_perc_change = if_else(condition = forest_perc_change > 100, 
+# Data organisation ----
+tab_buff_analysis %>%
+  mutate(forest_perc_change = if_else(condition = forest_perc_change > 100,
                                            true = 100,
-                                           false = forest_perc_change)) %>% 
+                                           false = forest_perc_change)) %>%
   filter(cat_change != "stable") %>%
   filter(fpp_perc_change != Inf) %>%
   filter(!is.na(cat_change)) %>%
-  filter(perc_forest_2022 >= 20) %>% 
-   glimpse -> tab_buff_analysis
+  filter(perc_forest_2022 >= 20) -> tab_buff_analysis
 
-tab_mun_analysis %>% 
-  mutate(mean_forest_perc_change = if_else(condition = mean_forest_perc_change > 100, 
+tab_mun_analysis %>%
+  mutate(mean_forest_perc_change = if_else(condition = mean_forest_perc_change > 100,
                                       true = 100,
                                       false = mean_forest_perc_change)) %>%
-  filter(cat_change != "stable") %>% 
-  glimpse -> tab_mun_analysis
+  filter(cat_change != "stable") -> tab_mun_analysis
 
 st_transform(x = tab_mun_analysis, crs = 5880) -> tab_mun_analysis
 st_transform(x = caat_shp, crs = 5880) -> caat_shp
@@ -54,24 +48,8 @@ coords_estados_sf <- st_as_sf(coords_estados, coords = c("x", "y"), crs = 4326) 
   st_transform(5880)
 
 bbox <- st_bbox(tab_mun_analysis)
-#análises----
-##at landscape level----
-###quantifying fpp and forest cover change per category
-tab_buff_analysis %>%
-  group_by(cat_change) %>%  # class = GG, GP, PG, PP
-  summarise(
-    n_paisagens = n(),                                # número de paisagens
-    total_pop_2010 = sum(fpp_2010, na.rm = TRUE),     # população total em 2010
-    total_pop_2022 = sum(fpp_2022, na.rm = TRUE),     # população total em 2022
-    mean_pop_change = mean(fpp_perc_change, na.rm = TRUE),     # média da mudança populacional (%)
-    mean_forest_change = mean(forest_perc_change, na.rm = TRUE), # média da mudança florestal (%)
-    mean_foresr_cover = mean(perc_forest_2022),
-    .groups = "drop"
-  ) -> tab_summary_landscapes
 
-tab_summary_landscapes
-
-###figure with all landscapes
+# Scatter plot ----
 tab_buff_analysis %>%
   ggplot() +
   geom_point(aes(x = forest_perc_change, y = fpp_perc_change,
@@ -90,23 +68,7 @@ tab_buff_analysis %>%
   theme(legend.position = "none",
         panel.background = element_rect(color = "white")) -> fpp_forest_all
 
-##at municipality scale----
-###quantifying fpp and forest cover change per category
-tab_mun_analysis %>%
-  group_by(cat_change) %>%  # class = GG, GP, PG, PP
-  summarise(
-    n_mun = n(),                                # número de paisagens
-    total_pop_2010 = sum(mean_fpp_2010, na.rm = TRUE),     # população total em 2010
-    total_pop_2022 = sum(mean_fpp_2022, na.rm = TRUE),     # população total em 2022
-    mean_pop_change = mean(mean_fpp_perc_change, na.rm = TRUE),     # média da mudança populacional (%)
-    mean_forest_change = mean(mean_forest_perc_change, na.rm = TRUE), # média da mudança florestal (%)
-    mean_forest_cover = mean(mean_perc_forest_2022),
-    .groups = "drop"
-  ) -> tab_summary_mun
-
-tab_summary_mun
-
-## map cat change
+# Map ----
 ggplot(tab_mun_analysis) +
   geom_sf(data = mun_caat, aes(geometry = geom, fill = "code_muni"), fill = "grey90", color = "grey", linewidth = 0.1) +
   geom_sf(aes(fill = cat_change), linewidth = 0, color = "grey") +
@@ -131,11 +93,10 @@ ggplot(tab_mun_analysis) +
         legend.title = element_text(size = 6),
         legend.position = c(0.9, 0.15)) -> map_forest_fpp
 
-#Figure 3----
+# Save ----
 fpp_forest_all + map_forest_fpp +
   plot_layout(widths = c(0.8, 1)) +
-  plot_annotation() -> fig_3 #, theme = theme(plot.tag = element_text(size = 12))) 
-
+  plot_annotation() -> fig_3
 
 ggsave(plot = fig_3, filename = "img/fig3.tiff",
        units = "in", device = "tiff", dpi = 600, width = 6, height = 3)
